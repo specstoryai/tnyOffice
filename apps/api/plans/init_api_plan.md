@@ -1,7 +1,12 @@
 # Markdown File API Plan
 
+## Status: ✅ Implemented
+
 ## Overview
 Dead simple create/read API for markdown files with clean, versioned routes.
+
+## Live Documentation
+Visit [http://localhost:3001](http://localhost:3001) for interactive API documentation and testing.
 
 ## API Structure
 
@@ -69,8 +74,8 @@ Dead simple create/read API for markdown files with clean, versioned routes.
 
 ### File Storage
 - Store files in `storage/markdown/` directory
-- Use UUID for file IDs
-- Save metadata in a simple JSON database or SQLite
+- Use UUID for file IDs (e.g., `be70cba3-77df-4c50-98b8-51088f686b02`)
+- Save metadata in a simple JSON database (`storage/markdown/metadata.json`)
 
 ### Error Handling
 - 400: Invalid request body
@@ -87,9 +92,32 @@ Dead simple create/read API for markdown files with clean, versioned routes.
 - Path traversal prevention
 - Rate limiting
 
+### Implementation Notes
+
+1. **Technologies Used**:
+   - Next.js 15 with App Router
+   - TypeScript for type safety
+   - Zod for validation
+   - File system for storage
+   - Tailwind CSS for UI
+
+2. **Key Files**:
+   - `app/api/v1/files/route.ts` - Create and list endpoints
+   - `app/api/v1/files/[id]/route.ts` - Get by ID endpoint
+   - `lib/storage.ts` - File storage utilities
+   - `lib/validation.ts` - Input validation schemas
+   - `app/page.tsx` - Interactive API documentation
+
+3. **Error Handling**:
+   - Consistent JSON error responses
+   - Proper HTTP status codes
+   - Validation error details
+
 ### Future Considerations
 - Update endpoint (PUT)
 - Delete endpoint (DELETE)
 - Search functionality
 - File versioning
 - Authentication/authorization
+- Database storage (PostgreSQL/MySQL)
+- S3/Cloud storage integration

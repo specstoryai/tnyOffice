@@ -9,9 +9,13 @@ This Next.js application serves as the dedicated API backend for:
 - Shared authentication (future)
 - Common data operations across all TnyOffice apps
 
+## Live API Documentation
+
+Visit [http://localhost:3001](http://localhost:3001) to access the interactive API documentation with live testing capabilities.
+
 ## API Documentation
 
-See [plans/init_api_plan.md](./plans/init_api_plan.md) for the API design and endpoints.
+See [plans/init_api_plan.md](./plans/init_api_plan.md) for the original API design.
 
 ### Base URL
 - Development: `http://localhost:3001`
@@ -22,7 +26,7 @@ See [plans/init_api_plan.md](./plans/init_api_plan.md) for the API design and en
 #### v1 API
 - `POST /api/v1/files` - Create a new markdown file
 - `GET /api/v1/files/:id` - Retrieve a specific file
-- `GET /api/v1/files` - List all files
+- `GET /api/v1/files` - List all files with pagination
 
 ## Getting Started
 
@@ -84,14 +88,23 @@ api/
 
 ## Testing
 
-```bash
-# Run tests
-npm run test
+### Using the Interactive Documentation
 
-# Test API endpoints
+The easiest way to test the API is through the interactive documentation at [http://localhost:3001](http://localhost:3001).
+
+### Using cURL
+
+```bash
+# Create a file
 curl -X POST http://localhost:3001/api/v1/files \
   -H "Content-Type: application/json" \
-  -d '{"filename": "test.md", "content": "# Test"}'
+  -d '{"filename": "test.md", "content": "# Test Document\n\nThis is a test."}'
+
+# Get a file by ID
+curl http://localhost:3001/api/v1/files/{id}
+
+# List files
+curl http://localhost:3001/api/v1/files?limit=20&offset=0
 ```
 
 ## Security
@@ -99,4 +112,14 @@ curl -X POST http://localhost:3001/api/v1/files \
 - Input sanitization on all endpoints
 - Path traversal protection
 - File size limits (5MB default)
+- UUID validation for file IDs
+- Filename validation (alphanumeric with dashes/underscores, .md extension)
 - Rate limiting (planned)
+
+## Implementation Details
+
+- **Storage**: Files are stored in the local filesystem under `storage/markdown/`
+- **Metadata**: File metadata is stored in a JSON file for simplicity
+- **IDs**: Files are identified by UUIDs
+- **Validation**: Uses Zod for schema validation
+- **Error Handling**: Consistent error responses with proper HTTP status codes
