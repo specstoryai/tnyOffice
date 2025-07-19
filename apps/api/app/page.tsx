@@ -12,7 +12,7 @@ export default function ApiDocumentation() {
   const [getForm, setGetForm] = useState({ id: '' });
   const [listForm, setListForm] = useState({ limit: '20', offset: '0' });
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
 
   const runTest = async () => {
     setLoading(true);
@@ -225,9 +225,39 @@ export default function ApiDocumentation() {
                       </span>
                     )}
                   </div>
-                  <pre className="overflow-x-auto bg-gray-900 text-gray-100 p-3 rounded mt-2 text-sm">
-                    {JSON.stringify(testResults.data || testResults.error, null, 2)}
-                  </pre>
+                  <div className="bg-gray-900 text-gray-100 p-3 rounded mt-2">
+                    {(() => {
+                      const data = testResults.data || testResults.error;
+                      const jsonString = JSON.stringify(data, null, 2);
+                      const isLargeContent = jsonString.length > 5000;
+                      
+                      if (isLargeContent && data?.content) {
+                        // For large files with content, show a summary
+                        const contentPreview = data.content.substring(0, 500);
+                        const displayData = {
+                          ...data,
+                          content: contentPreview + `\n\n... (truncated - ${data.content.length} total characters) ...`
+                        };
+                        
+                        return (
+                          <div>
+                            <div className="text-yellow-400 text-sm mb-2">
+                              ⚠️ Large response truncated for display. Full content was returned by the API.
+                            </div>
+                            <pre className="overflow-x-auto text-sm whitespace-pre-wrap">
+                              {JSON.stringify(displayData, null, 2)}
+                            </pre>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <pre className="overflow-x-auto text-sm whitespace-pre-wrap">
+                          {jsonString}
+                        </pre>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             )}
