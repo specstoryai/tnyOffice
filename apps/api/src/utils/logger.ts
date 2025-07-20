@@ -1,6 +1,17 @@
-// Wrapper for CommonJS logger to work with ESM
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { log } = require('@tnyoffice/logger');
+// Simple logger implementation for production deployment
+const isProd = process.env.NODE_ENV === 'production';
 
-export { log };
+export const log = {
+  info: (...args: unknown[]) => {
+    if (!isProd) console.info('[INFO]', ...args);
+  },
+  warn: (...args: unknown[]) => {
+    if (!isProd) console.warn('[WARN]', ...args);
+  },
+  error: (...args: unknown[]) => {
+    console.error('[ERROR]', ...args);
+  },
+  debug: (...args: unknown[]) => {
+    if (!isProd) console.debug('[DEBUG]', ...args);
+  },
+};

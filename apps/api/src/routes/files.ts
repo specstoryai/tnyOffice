@@ -58,7 +58,7 @@ router.post('/', async (req: Request<{}, {}, CreateFileRequest>, res: Response<F
     };
     
     log.info('POST /api/v1/files - Created:', fileMetadata);
-    res.status(201).json(fileMetadata);
+    return res.status(201).json(fileMetadata);
     
   } catch (error) {
     if (error instanceof ZodError) {
@@ -69,7 +69,7 @@ router.post('/', async (req: Request<{}, {}, CreateFileRequest>, res: Response<F
     }
     
     log.error('Error creating file:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -111,7 +111,7 @@ router.get('/', async (req: Request, res: Response<ListFilesResponse | ErrorResp
     };
     
     log.info('GET /api/v1/files - Result:', result);
-    res.json(result);
+    return res.json(result);
     
   } catch (error) {
     if (error instanceof ZodError) {
@@ -122,7 +122,7 @@ router.get('/', async (req: Request, res: Response<ListFilesResponse | ErrorResp
     }
     
     log.error('Error listing files:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -160,11 +160,11 @@ router.get('/:id', async (req: Request<{ id: string }>, res: Response<FileWithCo
     };
     
     log.info('GET /api/v1/files/[id] - Found:', result.id);
-    res.json(result);
+    return res.json(result);
     
   } catch (error) {
     log.error('Error getting file:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

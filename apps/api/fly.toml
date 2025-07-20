@@ -1,0 +1,31 @@
+# fly.toml app configuration file generated for tny-office-api on 2025-07-19T23:01:04-04:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'tny-office-api'
+primary_region = 'bos'
+
+[build]
+
+# Remove processes section since we'll use the default CMD from Dockerfile
+
+[[mounts]]
+  source = 'data'
+  destination = '/data'
+  auto_extend_size_threshold = 80
+  auto_extend_size_increment = '1GB'
+  auto_extend_size_limit = '10GB'
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  # processes = ['app']  # Not needed when using default process
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1

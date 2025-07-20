@@ -9,10 +9,13 @@ const __dirname = path.dirname(__filename);
 let db: Database.Database | null = null;
 
 export async function initDB(): Promise<Database.Database> {
-  const dbPath = path.join(__dirname, '../../database.db');
+  // Use /data directory for persistent volume in production, local path for development
+  const dbPath = process.env.NODE_ENV === 'production' 
+    ? '/data/database.db'
+    : path.join(__dirname, '../../database.db');
   db = new Database(dbPath);
   
-  log.info('Initializing SQLite database');
+  log.info('Initializing SQLite database at:', dbPath);
 
   // Create files table
   db.exec(`
