@@ -330,6 +330,8 @@ router.post('/:id/comments', async (req: Request<{ id: string }, object, CreateC
       }
       
       // Create cursors that will move with text edits
+      // 'after' for start means it stays after deleted text, 'before' for end means it stays before
+      // When all text between them is deleted, they should converge
       const startCursor = Automerge.getCursor(doc, ['content'], validatedData.anchorStart, 'after');
       const endCursor = Automerge.getCursor(doc, ['content'], validatedData.anchorEnd, 'before');
       
@@ -417,9 +419,13 @@ router.get('/:id/comments', async (req: Request<{ id: string }>, res: Response<C
             resolvedStart = startPos;
             resolvedEnd = endPos;
             
+            // Debug logging
+            log.debug(`Comment ${comment.id}: cursor positions - start: ${startPos}, end: ${endPos}, original: ${comment.anchorStart}-${comment.anchorEnd}`);
+            
             // Check if the comment is orphaned (cursors at same position)
             if (startPos === endPos) {
               status = 'orphaned';
+              log.info(`Comment ${comment.id} marked as orphaned: positions converged to ${startPos}`);
             }
           }
         } catch (err) {

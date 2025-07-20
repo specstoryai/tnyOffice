@@ -62,29 +62,32 @@ export function CommentsSidebar({
     );
   }
 
-  const CommentItem = ({ comment, isOrphaned = false }: { comment: Comment; isOrphaned?: boolean }) => (
-    <div
-      key={comment.id}
-      className={`p-4 hover:bg-gray-50 cursor-pointer group ${isOrphaned ? 'opacity-75' : ''}`}
-      onClick={() => !isOrphaned && onCommentClick(comment)}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-sm">{comment.author}</span>
-            <span className="text-gray-500 text-xs">{formatTime(comment.createdAt)}</span>
+  const CommentItem = ({ comment }: { comment: Comment }) => {
+    const isOrphaned = comment.status === 'orphaned';
+    
+    return (
+      <div
+        key={comment.id}
+        className={`p-4 hover:bg-gray-50 cursor-pointer group ${isOrphaned ? 'opacity-75' : ''}`}
+        onClick={() => !isOrphaned && onCommentClick(comment)}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-medium text-sm">{comment.author}</span>
+              <span className="text-gray-500 text-xs">{formatTime(comment.createdAt)}</span>
+            </div>
+            <p className="text-sm text-gray-700">{comment.text}</p>
+            {isOrphaned ? (
+              <p className="text-xs text-gray-500 mt-1 italic">
+                Original text: &quot;{comment.originalText || 'Unknown'}&quot;
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 mt-1">
+                Characters {comment.resolvedStart ?? comment.anchorStart}-{comment.resolvedEnd ?? comment.anchorEnd}
+              </p>
+            )}
           </div>
-          <p className="text-sm text-gray-700">{comment.text}</p>
-          {isOrphaned ? (
-            <p className="text-xs text-gray-500 mt-1 italic">
-              Original text: &quot;{comment.originalText || 'Unknown'}&quot;
-            </p>
-          ) : (
-            <p className="text-xs text-gray-500 mt-1">
-              Characters {comment.resolvedStart ?? comment.anchorStart}-{comment.resolvedEnd ?? comment.anchorEnd}
-            </p>
-          )}
-        </div>
         {comment.author === currentUser && (
           <button
             onClick={(e) => {
@@ -100,7 +103,8 @@ export function CommentsSidebar({
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="divide-y divide-gray-200">
@@ -121,7 +125,7 @@ export function CommentsSidebar({
             <p className="text-xs text-gray-500">Text was deleted or significantly changed</p>
           </div>
           {orphanedComments.map((comment) => (
-            <CommentItem key={comment.id} comment={comment} isOrphaned />
+            <CommentItem key={comment.id} comment={comment} />
           ))}
         </div>
       )}
