@@ -10,6 +10,7 @@ This is a production-ready TypeScript Node.js application that provides:
 - **Dual storage system**: SQLite for metadata + Automerge binary storage
 - **REST API** for traditional CRUD operations
 - **Automatic conflict resolution** using CRDT technology
+- **Commenting system** with real-time sync and position anchoring
 - **TypeScript** with strict type checking
 - **Express 5.1.0** for the web framework
 - **better-sqlite3 12.2.0** for database operations
@@ -64,6 +65,11 @@ npm run start
 - `GET /api/v1/files/:id` - Get a specific file by ID (with Automerge sync)
 - `PUT /api/v1/files/:id` - Update a file (creates/updates Automerge document)
 - `GET /api/v1/files/:id/automerge` - Get Automerge document URL for real-time sync
+
+#### Comments API
+- `POST /api/v1/files/:id/comments` - Add a comment to a document
+- `GET /api/v1/files/:id/comments` - Get all comments for a document
+- `DELETE /api/v1/files/:id/comments/:commentId` - Delete a specific comment
 
 #### Git API
 - `POST /api/v1/git/sync` - Sync all documents to git repository
@@ -124,6 +130,22 @@ curl -X PUT http://localhost:3001/api/v1/files/{id} \
 
 # Sync documents to git
 curl -X POST http://localhost:3001/api/v1/git/sync
+
+# Create a comment
+curl -X POST http://localhost:3001/api/v1/files/{id}/comments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "author": "TestUser",
+    "text": "This needs clarification",
+    "anchorStart": 10,
+    "anchorEnd": 25
+  }'
+
+# Get all comments
+curl http://localhost:3001/api/v1/files/{id}/comments
+
+# Delete a comment
+curl -X DELETE http://localhost:3001/api/v1/files/{id}/comments/{commentId}
 ```
 
 ## Real-time Collaboration
