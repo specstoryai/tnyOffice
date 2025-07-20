@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
@@ -27,7 +27,7 @@ async function start(): Promise<void> {
   try {
     await initDB();
     app.listen(PORT, () => {
-      log.info(`API2 server running on http://localhost:${PORT}`);
+      log.info(`API server running on http://localhost:${PORT}`);
     });
   } catch (error) {
     log.error('Failed to start server:', error);

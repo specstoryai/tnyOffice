@@ -1,6 +1,6 @@
-# API2 - TypeScript SQLite-based API Service
+# TnyOffice API Service
 
-A TypeScript Node.js API service using Express and SQLite for file storage, providing the same functionality as the main API service but with database persistence.
+A TypeScript Node.js API service using Express and SQLite for file storage, providing centralized file management for the TnyOffice monorepo.
 
 ## Overview
 
@@ -22,7 +22,7 @@ Run the development server with auto-reload:
 npm run dev
 ```
 
-The API will be available at [http://localhost:3003](http://localhost:3003).
+The API will be available at [http://localhost:3001](http://localhost:3001).
 
 ### Production
 
@@ -33,7 +33,7 @@ npm run start
 ## API Endpoints
 
 ### Base URL
-- Development: `http://localhost:3003`
+- Development: `http://localhost:3001`
 
 ### Available Endpoints
 
@@ -61,15 +61,15 @@ CREATE TABLE files (
 
 ```bash
 # Create a file
-curl -X POST http://localhost:3003/api/v1/files \
+curl -X POST http://localhost:3001/api/v1/files \
   -H "Content-Type: application/json" \
   -d '{"filename": "test.md", "content": "# Test Document\n\nThis is a test."}'
 
 # List files
-curl http://localhost:3003/api/v1/files?limit=20&offset=0
+curl http://localhost:3001/api/v1/files?limit=20&offset=0
 
 # Get a file by ID
-curl http://localhost:3003/api/v1/files/{id}
+curl http://localhost:3001/api/v1/files/{id}
 ```
 
 ## Implementation Details

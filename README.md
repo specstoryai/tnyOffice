@@ -7,8 +7,7 @@ A monorepo containing multiple Next.js applications with shared functionality.
 ```
 tnyOffice/
 ├── apps/
-│   ├── api/        # Centralized API service (Next.js, file-based)
-│   ├── api2/       # Simple Node.js API with SQLite storage
+│   ├── api/        # TypeScript Node.js API with SQLite storage
 │   └── docs/       # Collaborative markdown docs app (like GDocs)
 ├── packages/
 │   ├── logger/     # Shared logging utility
@@ -43,10 +42,7 @@ npm run build
 ## Apps
 
 ### API Service (`apps/api`)
-Centralized API for file management and shared backend functionality. Built with Next.js and uses file-based storage.
-
-### API2 Service (`apps/api2`)
-Simple Node.js API service using Express and SQLite for database storage. Provides the same endpoints as the main API but with persistent database storage.
+Centralized TypeScript Node.js API service using Express and SQLite for database storage. Provides file management and shared backend functionality for all TnyOffice apps.
 
 ### Documents (`apps/docs`)
 Collaborative markdown docs app (like GDocs).
