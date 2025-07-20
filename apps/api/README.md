@@ -17,6 +17,22 @@ This is a production-ready TypeScript Node.js application that provides:
 
 ## Getting Started
 
+### Environment Setup
+
+1. Copy the example environment file:
+```bash
+cp .env.example .env
+```
+
+2. Configure your environment variables:
+```bash
+# Edit .env to add your remote repository URL (optional)
+GIT_REMOTE_URL=https://github.com/username/repo.git
+
+# For private repos, use a personal access token:
+GIT_REMOTE_URL=https://username:token@github.com/username/repo.git
+```
+
 ### Development
 
 Run the development server with auto-reload:
@@ -134,6 +150,7 @@ The API includes git synchronization capabilities to export all documents to a l
 - Tracks additions, modifications, and deletions
 - Preserves document IDs in filenames to avoid conflicts
 - Fetches latest content from Automerge for edited documents
+- **Remote Push Support**: Automatically pushes to GitHub/GitLab when configured
 
 ### Git Repository Structure
 ```
@@ -146,6 +163,17 @@ git-repo/
 │   └── ...
 └── .gitignore
 ```
+
+### Remote Repository Setup
+
+To push changes to a remote repository:
+
+1. **Create a GitHub repository** (can be private or public)
+2. **Generate a Personal Access Token** with repo permissions
+3. **Set the environment variable**:
+   ```bash
+   GIT_REMOTE_URL=https://YOUR_USERNAME:YOUR_TOKEN@github.com/YOUR_USERNAME/YOUR_REPO.git
+   ```
 
 ### Usage
 ```bash
@@ -160,7 +188,9 @@ curl -X POST http://localhost:3001/api/v1/git/sync
     "added": ["123-readme.md"],
     "modified": ["456-spec.md"],
     "deleted": []
-  }
+  },
+  "pushedToRemote": true,
+  "remoteUrl": "https://github.com/username/repo.git"
 }
 ```
 

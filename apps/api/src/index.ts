@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -12,6 +13,17 @@ import gitRouter from './routes/git.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables from .env.local first, then .env
+dotenv.config({ path: path.join(__dirname, '../.env.local') });
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+// Debug environment variables
+if (process.env.GIT_REMOTE_URL) {
+  log.info('Environment loaded - GIT_REMOTE_URL is set');
+} else {
+  log.warn('Environment loaded - GIT_REMOTE_URL is NOT set');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;

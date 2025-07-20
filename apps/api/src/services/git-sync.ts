@@ -17,6 +17,8 @@ export interface GitSyncResult {
     modified: string[];
     deleted: string[];
   };
+  pushedToRemote?: boolean;
+  remoteUrl?: string;
   error?: string;
 }
 
@@ -29,6 +31,7 @@ export class GitSyncService {
       ? '/data/git-repo'
       : path.join(__dirname, '../../git-repo');
     
+    log.info('Git repo path:', this.gitRepoPath);
     this.git = simpleGit();
   }
 
@@ -63,9 +66,48 @@ export class GitSyncService {
       
       // Set git instance to work in the repo directory
       this.git = simpleGit(this.gitRepoPath);
+      
+      // Configure remote if provided
+      await this.configureRemote();
     } catch (error) {
       log.error('Failed to initialize git repository:', error);
       throw error;
+    }
+  }
+
+  private async configureRemote(): Promise<void> {
+    const remoteUrl = process.env.GIT_REMOTE_URL;
+    if (!remoteUrl) {
+      log.info('No GIT_REMOTE_URL configured, skipping remote setup');
+      return;
+    }
+
+    try {
+      log.info('Configuring git remote with URL:', remoteUrl.replace(/:[^@]+@/, ':***@'));
+      
+      // Check if origin remote exists
+      const remotes = await this.git.getRemotes(true);
+      log.info('Current remotes:', remotes.map(r => ({ name: r.name, url: r.refs?.push || r.refs?.fetch })));
+      
+      const originRemote = remotes.find(remote => remote.name === 'origin');
+
+      if (!originRemote) {
+        // Add origin remote
+        await this.git.addRemote('origin', remoteUrl);
+        log.info('Added git remote origin:', remoteUrl.replace(/:[^@]+@/, ':***@'));
+      } else {
+        // Update origin URL if it changed
+        const currentUrl = originRemote.refs?.push || originRemote.refs?.fetch;
+        if (currentUrl !== remoteUrl) {
+          await this.git.remote(['set-url', 'origin', remoteUrl]);
+          log.info('Updated git remote origin:', remoteUrl.replace(/:[^@]+@/, ':***@'));
+        } else {
+          log.info('Remote origin already configured correctly');
+        }
+      }
+    } catch (error) {
+      log.error('Failed to configure git remote:', error);
+      // Don't throw - remote is optional
     }
   }
 
@@ -167,10 +209,20 @@ export class GitSyncService {
 
       // Check if there are any changes to commit
       const status = await this.git.status();
+      log.info('Git status after file operations:', {
+        isClean: status.isClean(),
+        created: status.created,
+        modified: status.modified,
+        deleted: status.deleted,
+        staged: status.staged
+      });
+      
       if (!status.isClean()) {
         // Commit all changes
         const timestamp = new Date().toISOString();
         const commitMessage = `Sync documents from database - ${timestamp}`;
+        log.info('Creating commit with message:', commitMessage);
+        
         const commit = await this.git.commit(commitMessage);
         result.commitHash = commit.commit;
         result.success = true;
@@ -181,6 +233,13 @@ export class GitSyncService {
           modified: result.changes.modified.length,
           deleted: result.changes.deleted.length
         });
+        
+        // Push to remote if configured
+        const pushResult = await this.pushToRemote();
+        if (pushResult) {
+          result.pushedToRemote = pushResult.pushed;
+          result.remoteUrl = pushResult.remoteUrl;
+        }
       } else {
         result.success = true;
         log.info('No changes to commit');
@@ -192,6 +251,70 @@ export class GitSyncService {
       log.error('Git sync failed:', error);
       result.error = errorMessage;
       return result;
+    }
+  }
+
+  private async pushToRemote(): Promise<{ pushed: boolean; remoteUrl: string } | null> {
+    const remoteUrl = process.env.GIT_REMOTE_URL;
+    if (!remoteUrl) {
+      log.info('No remote URL configured, skipping push');
+      return null;
+    }
+
+    try {
+      log.info('Starting push to remote repository...');
+      log.info('Remote URL:', remoteUrl.replace(/:[^@]+@/, ':***@'));
+      
+      // Check current branch and remotes
+      const branches = await this.git.branch();
+      const currentBranch = branches.current;
+      log.info('Current branch:', currentBranch);
+      
+      const remotes = await this.git.getRemotes(true);
+      log.info('Available remotes:', remotes.map(r => r.name));
+      
+      // Check git status before push
+      const status = await this.git.status();
+      log.info('Git status before push:', {
+        current: status.current,
+        tracking: status.tracking,
+        ahead: status.ahead,
+        behind: status.behind
+      });
+      
+      // First push might need to set upstream
+      try {
+        log.info(`Attempting to push to origin/${currentBranch}...`);
+        const pushResult = await this.git.push('origin', currentBranch);
+        log.info('Push result:', pushResult);
+        log.info('Successfully pushed to remote repository');
+        return { pushed: true, remoteUrl: remoteUrl.replace(/:[^@]+@/, ':***@') };
+      } catch (pushError: any) {
+        log.error('Push error details:', {
+          message: pushError.message,
+          stack: pushError.stack
+        });
+        
+        // If push fails, might need to set upstream
+        if (pushError.message?.includes('has no upstream branch') || 
+            pushError.message?.includes('no upstream configured')) {
+          log.info('No upstream branch configured, setting upstream and pushing...');
+          const pushWithUpstream = await this.git.push('origin', currentBranch, ['--set-upstream']);
+          log.info('Push with upstream result:', pushWithUpstream);
+          log.info('Successfully pushed to remote repository with upstream set');
+          return { pushed: true, remoteUrl: remoteUrl.replace(/:[^@]+@/, ':***@') };
+        } else {
+          throw pushError;
+        }
+      }
+    } catch (error: any) {
+      log.error('Failed to push to remote:', {
+        message: error.message,
+        stack: error.stack,
+        gitError: error.git
+      });
+      // Don't throw - push failure shouldn't fail the sync
+      return { pushed: false, remoteUrl: remoteUrl.replace(/:[^@]+@/, ':***@') };
     }
   }
 

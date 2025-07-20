@@ -12,6 +12,7 @@ This plan outlines a simple, prototype-level approach to adding git capabilities
 - ✅ Environment-based paths (development vs production)
 - ✅ Automerge-aware content fetching
 - ✅ Add/modify/delete tracking with single commit per sync
+- ✅ Remote push support via GIT_REMOTE_URL environment variable
 
 ## Goals
 
@@ -149,11 +150,12 @@ apps/api/src/
 - [ ] Meaningful commit messages with user/change details
 - [ ] Git history endpoint to view commits
 
-### Phase 3 (Remote Integration)
-- [ ] GitHub integration with authentication
-- [ ] Push to remote repository
+### Phase 3 (Remote Integration) - PARTIALLY COMPLETE
+- [x] GitHub integration with authentication (via personal access token)
+- [x] Push to remote repository
 - [ ] Pull from remote (conflict resolution strategy needed)
 - [ ] Branch management
+- [ ] OAuth-based authentication (instead of tokens)
 
 ## Technical Considerations
 
@@ -246,6 +248,13 @@ The git sync integrates seamlessly with the existing Automerge-based architectur
 - Respects Automerge as the source of truth for edited documents
 - Uses the same `DocumentService` pattern as other endpoints
 - Maintains consistency with the dual-storage approach
+
+### Remote Push Implementation
+- Environment-based configuration via `GIT_REMOTE_URL`
+- Automatic remote setup on first sync
+- Handles upstream branch configuration
+- Non-blocking: push failures don't fail the sync operation
+- Supports both public and private repositories (with token auth)
 
 ## Conclusion
 

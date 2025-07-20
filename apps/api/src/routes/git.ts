@@ -8,13 +8,30 @@ const router = Router();
 router.post('/sync', async (_req: Request, res: Response) => {
   try {
     log.info('Starting git sync');
+    log.info('Environment check:', {
+      hasRemoteUrl: !!process.env.GIT_REMOTE_URL,
+      remoteUrl: process.env.GIT_REMOTE_URL ? process.env.GIT_REMOTE_URL.replace(/:[^@]+@/, ':***@') : 'not set'
+    });
     
     const gitSyncService = getGitSyncService();
     const result = await gitSyncService.syncDocuments();
     
+    log.info('Git sync result:', {
+      success: result.success,
+      commitHash: result.commitHash,
+      pushedToRemote: result.pushedToRemote,
+      remoteUrl: result.remoteUrl,
+      changes: {
+        added: result.changes.added.length,
+        modified: result.changes.modified.length,
+        deleted: result.changes.deleted.length
+      }
+    });
+    
     if (result.success) {
       res.json(result);
     } else {
+      log.error('Git sync failed:', result.error);
       res.status(500).json({
         error: result.error || 'Git sync failed',
         ...result
