@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Comment } from '@/lib/types/comment';
 import { Trash2 } from 'lucide-react';
 import { deleteComment } from '@/lib/api/comments';
@@ -11,6 +11,7 @@ interface CommentsSidebarProps {
   onCommentClick: (comment: Comment) => void;
   onCommentsUpdate: () => void;
   currentUser?: string;
+  activeCommentId?: string | null;
 }
 
 export function CommentsSidebar({ 
@@ -18,7 +19,8 @@ export function CommentsSidebar({
   comments, 
   onCommentClick, 
   onCommentsUpdate,
-  currentUser = 'Anonymous'
+  currentUser = 'Anonymous',
+  activeCommentId
 }: CommentsSidebarProps) {
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   
@@ -64,11 +66,28 @@ export function CommentsSidebar({
 
   const CommentItem = ({ comment }: { comment: Comment }) => {
     const isOrphaned = comment.status === 'orphaned';
+    const isActive = comment.id === activeCommentId;
+    const commentRef = useRef<HTMLDivElement>(null);
+    
+    // Scroll active comment into view
+    useEffect(() => {
+      if (isActive && commentRef.current) {
+        commentRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'nearest' 
+        });
+      }
+    }, [isActive]);
     
     return (
       <div
+        ref={commentRef}
         key={comment.id}
-        className={`p-4 hover:bg-gray-50 cursor-pointer group ${isOrphaned ? 'opacity-75' : ''}`}
+        className={`p-4 hover:bg-gray-50 cursor-pointer group transition-colors ${
+          isOrphaned ? 'opacity-75' : ''
+        } ${
+          isActive ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+        }`}
         onClick={() => !isOrphaned && onCommentClick(comment)}
       >
         <div className="flex items-start justify-between">

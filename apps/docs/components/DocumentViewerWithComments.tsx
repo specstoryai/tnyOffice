@@ -42,6 +42,7 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
     text: string;
   } | null>(null);
   const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
 
   // Fetch document
   useEffect(() => {
@@ -155,6 +156,9 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
   };
 
   const handleCommentClick = useCallback((comment: Comment) => {
+    // Set as active comment
+    setActiveCommentId(comment.id);
+    
     // Don't scroll for orphaned comments
     if (comment.status === 'orphaned' || !editorRef.current) {
       return;
@@ -268,11 +272,13 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
               editorRef={editorRef}
               onCommentClick={(position: number) => {
                 // Find comment at this position
-                const comment = comments.find(c => 
-                  position >= c.anchorStart && position <= c.anchorEnd
-                );
+                const comment = comments.find(c => {
+                  const start = c.resolvedStart ?? c.anchorStart;
+                  const end = c.resolvedEnd ?? c.anchorEnd;
+                  return position >= start && position <= end && c.status !== 'orphaned';
+                });
                 if (comment) {
-                  handleCommentClick(comment);
+                  setActiveCommentId(comment.id);
                 }
               }}
             />
@@ -296,6 +302,7 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
             onCommentClick={handleCommentClick}
             onCommentsUpdate={fetchComments}
             currentUser="Current User"
+            activeCommentId={activeCommentId}
           />
         </div>
       )}
