@@ -116,7 +116,6 @@ apps/
 
 ### Step 6: Enhanced Features
 1. Add presence/awareness support
-2. Implement offline support with sync on reconnect
 3. Create export endpoint for Git
 4. Add document history/versions view
 
@@ -305,7 +304,7 @@ class SQLiteStorageAdapter implements StorageAdapterInterface {
 - ⏳ Multiple users can edit same document
 - ⏳ Changes sync automatically with conflict resolution
 - ⏳ Presence indicators and cursor positions
-- ⏳ Offline support with sync on reconnect
+
 
 ---
 
