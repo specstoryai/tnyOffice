@@ -221,12 +221,7 @@ Key features:
    - Ensure sticky sessions for Socket.io
    - Test WebSocket connectivity
 
-2. **Environment Variables**
-   ```
-   NODE_ENV=production
-   PORT=3001
-   CORS_ORIGIN=https://docs-app-url.com
-   ```
+
 
 ---
 
