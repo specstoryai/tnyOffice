@@ -1,7 +1,9 @@
-# Comments UI Plan - Simple Prototype
+# Comments UI Plan - Simple Prototype ✅
 
 ## Overview
 Add basic commenting UI to the existing CodeMirror-based collaborative editor.
+
+## Implementation Status: COMPLETED ✅
 
 ## Components
 

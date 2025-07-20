@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { DocumentList } from '@/components/DocumentList';
-import { DocumentViewer } from '@/components/DocumentViewer';
+import { DocumentViewerWithComments } from '@/components/DocumentViewerWithComments';
 import { CreateModal } from '@/components/CreateModal';
 
 export default function Home() {
@@ -28,7 +28,7 @@ export default function Home() {
           />
         }
       >
-        <DocumentViewer documentId={selectedDocumentId} />
+        <DocumentViewerWithComments documentId={selectedDocumentId} />
       </Layout>
 
       <CreateModal

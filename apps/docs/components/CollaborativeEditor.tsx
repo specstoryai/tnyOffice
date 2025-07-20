@@ -1,20 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
-import { EditorView } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
 import { automergeSyncPlugin } from '@automerge/automerge-codemirror';
 import { useRepo } from '@automerge/automerge-repo-react-hooks';
 import type { MarkdownDocument } from '@/lib/automerge/types';
 import type { AutomergeUrl, DocHandle } from '@automerge/automerge-repo';
+import { commentsField, commentTheme, updateComments } from '@/lib/codemirror/comments-extension';
+import { Comment } from '@/lib/types/comment';
 
-interface CollaborativeEditorProps {
+export interface CollaborativeEditorProps {
   documentUrl: string;
   readOnly?: boolean;
   placeholder?: string;
   onConnectionChange?: (connected: boolean) => void;
   onContentChange?: (content: string) => void;
+  onAddComment?: (selection: { from: number; to: number; text: string }) => void;
+  comments?: Comment[];
+  onCommentClick?: (position: number) => void;
 }
 
 export function CollaborativeEditor({ 
@@ -22,12 +27,16 @@ export function CollaborativeEditor({
   readOnly = false, 
   placeholder,
   onConnectionChange,
-  onContentChange
+  onContentChange,
+  onAddComment,
+  comments = [],
+  onCommentClick
 }: CollaborativeEditorProps) {
   const repo = useRepo();
   const [handle, setHandle] = useState<DocHandle<MarkdownDocument> | null>(null);
   const [initialContent, setInitialContent] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
+  const editorViewRef = useRef<EditorView | null>(null);
 
   // Get handle from repo
   useEffect(() => {
@@ -109,6 +118,49 @@ export function CollaborativeEditor({
     };
   }, [handle, isReady, onContentChange]);
 
+  // Update comments in editor when they change
+  useEffect(() => {
+    if (editorViewRef.current && comments) {
+      updateComments(editorViewRef.current, comments);
+    }
+  }, [comments]);
+
+  // Handle comment keyboard shortcut
+  const handleAddComment = useCallback(() => {
+    if (!editorViewRef.current || !onAddComment) return false;
+    
+    const state = editorViewRef.current.state;
+    const selection = state.selection.main;
+    
+    if (selection.from === selection.to) {
+      // No selection
+      return false;
+    }
+    
+    const selectedText = state.doc.sliceString(selection.from, selection.to);
+    onAddComment({
+      from: selection.from,
+      to: selection.to,
+      text: selectedText
+    });
+    
+    return true;
+  }, [onAddComment]);
+
+  // Handle click on commented text
+  const handleCommentClick = useCallback((event: MouseEvent) => {
+    if (!editorViewRef.current || !onCommentClick) return;
+    
+    const pos = editorViewRef.current.posAtCoords({ x: event.clientX, y: event.clientY });
+    if (pos !== null) {
+      // Check if click is on a comment
+      const target = event.target as HTMLElement;
+      if (target.classList.contains('cm-comment-highlight')) {
+        onCommentClick(pos);
+      }
+    }
+  }, [onCommentClick]);
+
   if (!handle || !isReady) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -125,6 +177,17 @@ export function CollaborativeEditor({
   const extensions = [
     markdown(),
     syncPlugin,
+    commentsField,
+    commentTheme,
+    keymap.of([
+      {
+        key: 'Mod-k',
+        run: handleAddComment,
+      }
+    ]),
+    EditorView.domEventHandlers({
+      click: handleCommentClick,
+    }),
     EditorView.theme({
       '&': {
         fontSize: '14px',
@@ -174,6 +237,9 @@ export function CollaborativeEditor({
         searchKeymap: true,
       }}
       style={{ height: '100%' }}
+      onCreateEditor={(view) => {
+        editorViewRef.current = view;
+      }}
     />
   );
 }
