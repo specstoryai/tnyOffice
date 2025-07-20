@@ -1,20 +1,44 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { getGitSyncService } from '../services/git-sync.js';
 import { log } from '../utils/logger.js';
 
 const router = Router();
 
+// Schema for sync request
+const syncRequestSchema = z.object({
+  remoteUrl: z.string().url().optional(),
+  commitMessage: z.string().optional()
+});
+
 // POST /api/v1/git/sync - Sync all documents to git repository
-router.post('/sync', async (_req: Request, res: Response) => {
+router.post('/sync', async (req: Request, res: Response): Promise<Response> => {
   try {
+    // Parse request body
+    const parseResult = syncRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        error: 'Invalid request body',
+        details: parseResult.error.issues
+      });
+    }
+    
+    const { remoteUrl, commitMessage } = parseResult.data;
+    
     log.info('Starting git sync');
-    log.info('Environment check:', {
-      hasRemoteUrl: !!process.env.GIT_REMOTE_URL,
-      remoteUrl: process.env.GIT_REMOTE_URL ? process.env.GIT_REMOTE_URL.replace(/:[^@]+@/, ':***@') : 'not set'
+    log.info('Sync parameters:', {
+      hasRequestRemoteUrl: !!remoteUrl,
+      requestRemoteUrl: remoteUrl ? remoteUrl.replace(/:[^@]+@/, ':***@') : undefined,
+      hasEnvRemoteUrl: !!process.env.GIT_REMOTE_URL,
+      envRemoteUrl: process.env.GIT_REMOTE_URL ? process.env.GIT_REMOTE_URL.replace(/:[^@]+@/, ':***@') : 'not set',
+      hasCustomCommitMessage: !!commitMessage
     });
     
     const gitSyncService = getGitSyncService();
-    const result = await gitSyncService.syncDocuments();
+    const result = await gitSyncService.syncDocuments({
+      remoteUrl: remoteUrl || process.env.GIT_REMOTE_URL,
+      commitMessage
+    });
     
     log.info('Git sync result:', {
       success: result.success,
@@ -29,17 +53,17 @@ router.post('/sync', async (_req: Request, res: Response) => {
     });
     
     if (result.success) {
-      res.json(result);
+      return res.json(result);
     } else {
       log.error('Git sync failed:', result.error);
-      res.status(500).json({
+      return res.status(500).json({
         error: result.error || 'Git sync failed',
         ...result
       });
     }
   } catch (error) {
     log.error('Git sync endpoint error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Internal server error during git sync',
       message: error instanceof Error ? error.message : String(error)
     });

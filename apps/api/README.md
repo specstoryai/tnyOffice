@@ -66,7 +66,10 @@ npm run start
 - `GET /api/v1/files/:id/automerge` - Get Automerge document URL for real-time sync
 
 #### Git API
-- `POST /api/v1/git/sync` - Sync all documents to local git repository
+- `POST /api/v1/git/sync` - Sync all documents to git repository
+  - Optional body parameters:
+    - `remoteUrl` (string): Override the default remote repository URL
+    - `commitMessage` (string): Custom commit message instead of default timestamp
 
 ### WebSocket Endpoints
 
@@ -177,8 +180,30 @@ To push changes to a remote repository:
 
 ### Usage
 ```bash
-# Sync all documents to git
+# Basic sync (uses environment variables)
 curl -X POST http://localhost:3001/api/v1/git/sync
+
+# Sync with custom remote URL (overrides environment variable)
+curl -X POST http://localhost:3001/api/v1/git/sync \
+  -H "Content-Type: application/json" \
+  -d '{
+    "remoteUrl": "https://github.com/username/repo.git"
+  }'
+
+# Sync with custom commit message
+curl -X POST http://localhost:3001/api/v1/git/sync \
+  -H "Content-Type: application/json" \
+  -d '{
+    "commitMessage": "Weekly backup of all documents"
+  }'
+
+# Sync with both custom remote and message
+curl -X POST http://localhost:3001/api/v1/git/sync \
+  -H "Content-Type: application/json" \
+  -d '{
+    "remoteUrl": "https://username:token@github.com/username/repo.git",
+    "commitMessage": "Manual sync to backup repository"
+  }'
 
 # Response
 {

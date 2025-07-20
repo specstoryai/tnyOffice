@@ -22,6 +22,11 @@ export interface GitSyncResult {
   error?: string;
 }
 
+export interface GitSyncOptions {
+  remoteUrl?: string;
+  commitMessage?: string;
+}
+
 export class GitSyncService {
   private gitRepoPath: string;
   private git: SimpleGit;
@@ -35,7 +40,7 @@ export class GitSyncService {
     this.git = simpleGit();
   }
 
-  async initializeRepo(): Promise<void> {
+  async initializeRepo(overrideRemoteUrl?: string): Promise<void> {
     try {
       // Create the git repo directory if it doesn't exist
       await fs.mkdir(this.gitRepoPath, { recursive: true });
@@ -68,17 +73,17 @@ export class GitSyncService {
       this.git = simpleGit(this.gitRepoPath);
       
       // Configure remote if provided
-      await this.configureRemote();
+      await this.configureRemote(overrideRemoteUrl);
     } catch (error) {
       log.error('Failed to initialize git repository:', error);
       throw error;
     }
   }
 
-  private async configureRemote(): Promise<void> {
-    const remoteUrl = process.env.GIT_REMOTE_URL;
+  private async configureRemote(overrideRemoteUrl?: string): Promise<void> {
+    const remoteUrl = overrideRemoteUrl || process.env.GIT_REMOTE_URL;
     if (!remoteUrl) {
-      log.info('No GIT_REMOTE_URL configured, skipping remote setup');
+      log.info('No remote URL configured, skipping remote setup');
       return;
     }
 
@@ -111,7 +116,7 @@ export class GitSyncService {
     }
   }
 
-  async syncDocuments(): Promise<GitSyncResult> {
+  async syncDocuments(options: GitSyncOptions = {}): Promise<GitSyncResult> {
     const result: GitSyncResult = {
       success: false,
       changes: {
@@ -123,7 +128,7 @@ export class GitSyncService {
 
     try {
       // Ensure repo is initialized
-      await this.initializeRepo();
+      await this.initializeRepo(options.remoteUrl);
 
       // Get all documents from database
       const db = getDB();
@@ -220,7 +225,8 @@ export class GitSyncService {
       if (!status.isClean()) {
         // Commit all changes
         const timestamp = new Date().toISOString();
-        const commitMessage = `Sync documents from database - ${timestamp}`;
+        const defaultMessage = `Sync documents from database - ${timestamp}`;
+        const commitMessage = options.commitMessage || defaultMessage;
         log.info('Creating commit with message:', commitMessage);
         
         const commit = await this.git.commit(commitMessage);
@@ -235,7 +241,7 @@ export class GitSyncService {
         });
         
         // Push to remote if configured
-        const pushResult = await this.pushToRemote();
+        const pushResult = await this.pushToRemote(options.remoteUrl);
         if (pushResult) {
           result.pushedToRemote = pushResult.pushed;
           result.remoteUrl = pushResult.remoteUrl;
@@ -254,8 +260,8 @@ export class GitSyncService {
     }
   }
 
-  private async pushToRemote(): Promise<{ pushed: boolean; remoteUrl: string } | null> {
-    const remoteUrl = process.env.GIT_REMOTE_URL;
+  private async pushToRemote(overrideRemoteUrl?: string): Promise<{ pushed: boolean; remoteUrl: string } | null> {
+    const remoteUrl = overrideRemoteUrl || process.env.GIT_REMOTE_URL;
     if (!remoteUrl) {
       log.info('No remote URL configured, skipping push');
       return null;
