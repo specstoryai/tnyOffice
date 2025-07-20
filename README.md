@@ -42,10 +42,31 @@ npm run build
 ## Apps
 
 ### API Service (`apps/api`)
-Centralized TypeScript Node.js API service using Express and SQLite for database storage. Provides file management and shared backend functionality for all TnyOffice apps.
+Real-time collaborative markdown editor API with TypeScript, Express, SQLite, and Automerge CRDTs. Features:
+- **WebSocket support** for real-time collaboration via Automerge sync
+- **SQLite database** with persistent volume for data storage
+- **REST API** for CRUD operations on markdown files
+- **Automatic conflict resolution** using CRDT technology
+- **Deployed on Fly.io** with WebSocket support
+
+**URLs:**
+- Local: `http://localhost:3001`
+- Production: `https://tny-office-api.fly.dev`
+- WebSocket: `wss://tny-office-api.fly.dev/automerge-sync`
 
 ### Documents (`apps/docs`)
-Collaborative markdown docs app (like GDocs).
+Next.js collaborative markdown editor (like Google Docs) with real-time sync. Features:
+- **Real-time collaboration** using Automerge CRDTs
+- **WebSocket connection** to API for instant updates
+- **Document list** with create/edit capabilities
+- **Markdown preview** with side-by-side editing
+
+**Environment Variables:**
+```bash
+# .env.local
+NEXT_PUBLIC_API_URL=https://tny-office-api.fly.dev
+NEXT_PUBLIC_WS_URL=wss://tny-office-api.fly.dev/automerge-sync
+```
 
 ## Adding New Apps
 
@@ -159,6 +180,68 @@ Vercel runs both linting and type checking during deployment. Our setup ensures:
 2. **Consistent code quality** across the monorepo
 3. **Early error detection** during development
 4. **Production-ready code** with no debug logs
+
+## Deployment
+
+### API Deployment to Fly.io
+
+The API service is deployed on Fly.io with WebSocket support and persistent SQLite storage.
+
+#### Prerequisites
+- [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/) installed
+- Authenticated with `fly auth login`
+
+#### Initial Deployment
+```bash
+cd apps/api
+
+# Create new app (one-time setup)
+fly launch --no-deploy
+# Choose app name, region, NO to Postgres/Redis
+
+# Create persistent volume for SQLite
+fly volumes create data --size 1 --region bos
+
+# Deploy
+fly deploy
+```
+
+#### Updating Deployment
+```bash
+cd apps/api
+fly deploy
+```
+
+#### Monitoring
+```bash
+# View logs
+fly logs
+
+# Check status
+fly status
+
+# SSH into container
+fly ssh console
+```
+
+#### Configuration
+The `fly.toml` is configured for:
+- WebSocket support on `/automerge-sync`
+- Persistent volume mounted at `/data`
+- Auto-scaling with minimum 1 instance for WebSocket connections
+- HTTPS with automatic certificates
+
+### Frontend Deployment
+
+The docs app can be deployed to Vercel:
+
+1. Push to GitHub
+2. Import project in Vercel
+3. Set environment variables:
+   ```
+   NEXT_PUBLIC_API_URL=https://tny-office-api.fly.dev
+   NEXT_PUBLIC_WS_URL=wss://tny-office-api.fly.dev/automerge-sync
+   ```
 
 ## Contributing
 
