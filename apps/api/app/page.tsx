@@ -219,7 +219,7 @@ export default function ApiDocumentation() {
                   <div className="mb-2">
                     <span className="font-medium text-gray-700 dark:text-gray-300">Status:</span>{' '}
                     <span className={`font-bold ${
-                      testResults.status >= 200 && testResults.status < 300
+                      testResults.status && testResults.status >= 200 && testResults.status < 300
                         ? 'text-green-600 dark:text-green-400'
                         : 'text-red-600 dark:text-red-400'
                     }`}>
@@ -237,7 +237,7 @@ export default function ApiDocumentation() {
                       const jsonString = JSON.stringify(data, null, 2);
                       const isLargeContent = jsonString.length > 5000;
                       
-                      if (isLargeContent && data?.content) {
+                      if (isLargeContent && data && typeof data === 'object' && 'content' in data && typeof data.content === 'string') {
                         // For large files with content, show a summary
                         const contentPreview = data.content.substring(0, 500);
                         const displayData = {

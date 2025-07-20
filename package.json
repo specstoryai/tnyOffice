@@ -13,7 +13,8 @@
     "lint:root": "eslint . --ext .ts,.tsx,.js,.jsx,.mjs --ignore-path .gitignore",
     "typecheck": "turbo run typecheck",
     "typecheck:root": "tsc --noEmit",
-    "check-all": "npm run lint && npm run typecheck"
+    "check-all": "npm run lint && npm run typecheck",
+    "check-build": "npm run check-all && npm run build"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.37.0",
