@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { log } from '@tnyoffice/logger';
 
 interface FileMetadata {
   id: string;
@@ -17,7 +18,7 @@ interface DocumentListProps {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-console.log('DocumentList - API_BASE:', API_BASE);
+log.info('DocumentList - API_BASE:', API_BASE);
 
 export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger }: DocumentListProps) {
   const [documents, setDocuments] = useState<FileMetadata[]>([]);
@@ -34,19 +35,19 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
       const currentOffset = reset ? 0 : offset;
       
       const url = `${API_BASE}/api/v1/files?limit=${limit}&offset=${currentOffset}`;
-      console.log('Fetching documents from:', url);
+      log.debug('Fetching documents from:', url);
       
       const response = await fetch(url);
-      console.log('Response status:', response.status, response.statusText);
+      log.debug('Response status:', response.status, response.statusText);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Response error:', errorText);
+        log.error('Response error:', errorText);
         throw new Error(`Failed to fetch documents: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
-      console.log('Documents fetched:', data);
+      log.info('Documents fetched:', data);
       
       if (reset) {
         setDocuments(data.files);
@@ -57,7 +58,7 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
       setHasMore(data.files.length === limit && currentOffset + limit < data.total);
       if (!reset) setOffset(currentOffset + limit);
     } catch (err) {
-      console.error('Error fetching documents:', err);
+      log.error('Error fetching documents:', err);
       setError(err instanceof Error ? err.message : 'Failed to load documents');
     } finally {
       setLoading(false);

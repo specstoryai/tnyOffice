@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFile } from '@/lib/storage';
 import { isValidUUID } from '@/lib/validation';
 import { corsHeaders, corsResponse } from '@/lib/cors';
+import { log } from '@tnyoffice/logger';
 
 // Handle OPTIONS for CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -12,10 +13,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log('GET /api/v1/files/[id] - Request received');
+  log.info('GET /api/v1/files/[id] - Request received');
   try {
     const { id } = await params;
-    console.log('GET /api/v1/files/[id] - ID:', id);
+    log.debug('GET /api/v1/files/[id] - ID:', id);
     
     if (!isValidUUID(id)) {
       return corsResponse(
@@ -35,7 +36,7 @@ export async function GET(
     
     return corsResponse(file);
   } catch (error) {
-    console.error('Error retrieving file:', error);
+    log.error('Error retrieving file:', error);
     return corsResponse(
       { error: 'Internal server error' },
       500

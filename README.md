@@ -10,6 +10,7 @@ tnyOffice/
 │   ├── api/        # Centralized API service
 │   └── docs/       # Collaborative markdown docs app (like GDocs)
 ├── packages/
+│   ├── logger/     # Shared logging utility
 │   ├── shared/     # Shared utilities and types
 │   └── ui/         # Shared UI components
 └── package.json    # Workspace configuration
@@ -56,6 +57,19 @@ Collaborative markdown docs app (like GDocs).
    # or with shadcn/ui
    npx shadcn@latest init
    ```
+
+## Packages
+
+### Logger (`packages/logger`)
+A simple, environment-aware logging utility that provides consistent logging across all apps.
+
+Usage:
+```typescript
+import { log } from '@tnyoffice/logger';
+
+log.info('Fetching user data', userId);
+log.error('Failed to fetch', error);
+```
 
 ## Workspace Management
 

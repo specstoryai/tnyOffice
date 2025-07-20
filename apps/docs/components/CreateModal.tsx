@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Editor } from './Editor';
+import { log } from '@tnyoffice/logger';
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -45,8 +46,8 @@ export function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
         content,
       };
       
-      console.log('Creating document at:', url);
-      console.log('Request body:', body);
+      log.debug('Creating document at:', url);
+      log.debug('Request body:', body);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -56,11 +57,11 @@ export function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
         body: JSON.stringify(body),
       });
 
-      console.log('Create response status:', response.status, response.statusText);
+      log.debug('Create response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const data = await response.json();
-        console.error('Create error:', data);
+        log.error('Create error:', data);
         throw new Error(data.error || 'Failed to create document');
       }
 

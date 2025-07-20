@@ -1,0 +1,16 @@
+{
+  "name": "@tnyoffice/logger",
+  "version": "1.0.0",
+  "description": "Shared logger for TnyOffice monorepo",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

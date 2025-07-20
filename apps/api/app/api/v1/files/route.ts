@@ -3,6 +3,7 @@ import { createFile, listFiles } from '@/lib/storage';
 import { createFileSchema, listFilesSchema } from '@/lib/validation';
 import { corsHeaders, corsResponse } from '@/lib/cors';
 import { ZodError } from 'zod';
+import { log } from '@tnyoffice/logger';
 
 // Handle OPTIONS for CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -10,14 +11,14 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('POST /api/v1/files - Request received');
+  log.info('POST /api/v1/files - Request received');
   try {
     const body = await request.json();
-    console.log('POST /api/v1/files - Body:', body);
+    log.debug('POST /api/v1/files - Body:', body);
     const validatedData = createFileSchema.parse(body);
     
     const fileMetadata = await createFile(validatedData.filename, validatedData.content);
-    console.log('POST /api/v1/files - Created:', fileMetadata);
+    log.info('POST /api/v1/files - Created:', fileMetadata);
     
     return corsResponse(fileMetadata, 201);
   } catch (error) {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    console.error('Error creating file:', error);
+    log.error('Error creating file:', error);
     return corsResponse(
       { error: 'Internal server error' },
       500
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  console.log('GET /api/v1/files - Request received');
+  log.info('GET /api/v1/files - Request received');
   try {
     const searchParams = request.nextUrl.searchParams;
     const params = {
@@ -45,10 +46,10 @@ export async function GET(request: NextRequest) {
       offset: searchParams.get('offset') || '0'
     };
     
-    console.log('GET /api/v1/files - Params:', params);
+    log.debug('GET /api/v1/files - Params:', params);
     const validatedParams = listFilesSchema.parse(params);
     const result = await listFiles(validatedParams.limit, validatedParams.offset);
-    console.log('GET /api/v1/files - Result:', result);
+    log.info('GET /api/v1/files - Result:', result);
     
     return corsResponse(result);
   } catch (error) {
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    console.error('Error listing files:', error);
+    log.error('Error listing files:', error);
     return corsResponse(
       { error: 'Internal server error' },
       500
