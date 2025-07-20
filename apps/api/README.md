@@ -233,7 +233,92 @@ curl -X POST http://localhost:3001/api/v1/git/sync \
 
 ## Deployment
 
-The API is designed to run on Fly.io with:
-- Persistent volume for SQLite database
-- WebSocket support for real-time features
-- Environment variables for configuration
+### Deploying to Fly.io
+
+The API is designed to run on Fly.io with persistent storage and WebSocket support.
+
+#### Prerequisites
+1. Install the Fly CLI: https://fly.io/docs/hands-on/install-flyctl/
+2. Sign up/login: `fly auth login`
+
+#### Initial Deployment
+```bash
+# Option 1: Deploy first, then set secrets
+fly deploy
+fly secrets set GIT_REMOTE_URL="https://github.com/username/repo.git"
+
+# Option 2: Set secrets first, then deploy
+fly secrets set GIT_REMOTE_URL="https://github.com/username/repo.git"
+fly deploy
+```
+
+**Note**: Environment variables in Fly.io are NOT set via .env files. They are managed through `fly secrets` commands and injected into the container at runtime.
+
+#### Features
+- **Persistent Volume**: `/data` directory persists across deployments
+  - SQLite database: `/data/database.db`
+  - Git repository: `/data/git-repo/`
+- **WebSocket Support**: Configured for real-time collaboration
+- **Auto-scaling**: Configured with min 1 machine for WebSocket persistence
+- **Git Integration**: Git is pre-installed and configured
+  - Default commit author: "TnyOffice API <api@tnyoffice.com>"
+  - Repository persists in volume across deployments
+
+#### Environment Variables
+Fly.io uses secrets management for environment variables (NOT .env files):
+
+```bash
+# Set GitHub remote (public repo)
+fly secrets set GIT_REMOTE_URL="https://github.com/username/repo.git"
+
+# Set GitHub remote (private repo with token)
+fly secrets set GIT_REMOTE_URL="https://username:token@github.com/username/repo.git"
+
+# View current secrets (names only, values are hidden)
+fly secrets list
+
+# Remove a secret
+fly secrets unset GIT_REMOTE_URL
+```
+
+**Important**: Setting or changing a secret automatically restarts your app.
+
+#### Setting up GitHub Authentication
+
+For pushing to GitHub repositories from Fly.io:
+
+1. **Create a GitHub Personal Access Token**:
+   - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token"
+   - Give it a name (e.g., "TnyOffice Fly.io")
+   - Select scopes:
+     - `repo` (for private repositories)
+     - `public_repo` (for public repositories only)
+   - Copy the token immediately (you won't see it again)
+
+2. **Set the token in Fly.io**:
+   ```bash
+   # For private repos
+   fly secrets set GIT_REMOTE_URL="https://YOUR_USERNAME:YOUR_TOKEN@github.com/YOUR_USERNAME/REPO_NAME.git"
+   
+   # Example
+   fly secrets set GIT_REMOTE_URL="https://jakelevirne:ghp_xxxxxxxxxxxx@github.com/jakelevirne/docs-fly.git"
+   ```
+
+3. **Security Notes**:
+   - The token is encrypted by Fly.io and only available to your app at runtime
+   - Never commit tokens to your code or Docker images
+   - Use tokens with minimal required permissions
+   - Consider setting an expiration date on your token
+
+#### Monitoring
+```bash
+# View logs
+fly logs
+
+# Check app status
+fly status
+
+# SSH into the container
+fly ssh console
+```

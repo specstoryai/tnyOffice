@@ -34,10 +34,14 @@ RUN npm prune --production
 # Final stage for app image
 FROM base
 
-# Install packages needed for deployment (including SQLite)
+# Install packages needed for deployment (including SQLite, git, and CA certificates)
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y sqlite3 && \
+    apt-get install --no-install-recommends -y sqlite3 git ca-certificates && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Configure git for commits
+RUN git config --global user.email "api@tnyoffice.com" && \
+    git config --global user.name "TnyOffice API"
 
 # Copy built application
 COPY --from=build /app/dist ./dist
