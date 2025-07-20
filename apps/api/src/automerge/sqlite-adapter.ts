@@ -1,19 +1,17 @@
 import type { StorageAdapterInterface, StorageKey } from '@automerge/automerge-repo';
-import type { Database } from 'better-sqlite3';
+import type { Database, Statement } from 'better-sqlite3';
 import { log } from '../utils/logger.js';
 
 export class SQLiteStorageAdapter implements StorageAdapterInterface {
-  private db: Database;
   private statements: {
-    load: Database.Statement;
-    save: Database.Statement;
-    remove: Database.Statement;
-    loadRange: Database.Statement;
-    removeRange: Database.Statement;
+    load: Statement;
+    save: Statement;
+    remove: Statement;
+    loadRange: Statement;
+    removeRange: Statement;
   };
 
   constructor(db: Database) {
-    this.db = db;
     
     // Prepare statements for better performance
     this.statements = {

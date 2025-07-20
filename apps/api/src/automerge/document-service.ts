@@ -1,5 +1,4 @@
 import { AutomergeUrl, DocHandle } from '@automerge/automerge-repo';
-import type { Doc } from '@automerge/automerge';
 import { getRepo } from './repo.js';
 import { getDB } from '../db/database.js';
 import type { MarkdownDocument } from './types.js';
@@ -29,14 +28,14 @@ export class DocumentService {
     if (file.automerge_id) {
       // File already has an Automerge document
       log.info(`Loading existing Automerge document for file ${fileId}`);
-      handle = repo.find<MarkdownDocument>(file.automerge_id as AutomergeUrl);
+      handle = await repo.find<MarkdownDocument>(file.automerge_id as AutomergeUrl);
     } else {
       // Create new Automerge document
       log.info(`Creating new Automerge document for file ${fileId}`);
       handle = repo.create<MarkdownDocument>();
       
       // Initialize document with current content
-      handle.change((doc: Doc<MarkdownDocument>) => {
+      handle.change((doc) => {
         doc.content = file.content || '';
         doc.metadata = {
           filename: file.filename,
@@ -92,7 +91,7 @@ export class DocumentService {
    * Update document content
    */
   static updateDocumentContent(handle: DocHandle<MarkdownDocument>, content: string): void {
-    handle.change((doc: Doc<MarkdownDocument>) => {
+    handle.change((doc) => {
       doc.content = content;
       if (doc.metadata) {
         doc.metadata.updatedAt = Date.now();

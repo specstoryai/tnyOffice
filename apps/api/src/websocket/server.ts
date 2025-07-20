@@ -33,7 +33,7 @@ export function initWebSocketServer(httpServer: HTTPServer): SocketIOServer {
 
   // Create Automerge WebSocket adapter
   const repo = getRepo();
-  wsAdapter = new WebSocketServerAdapter(wss);
+  wsAdapter = new WebSocketServerAdapter(wss as any);
   repo.networkSubsystem.addNetworkAdapter(wsAdapter);
 
   // Handle connections
