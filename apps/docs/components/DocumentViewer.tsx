@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Editor } from './Editor';
+import { CollaborativeEditor } from './ClientOnlyCollaborativeEditor';
+import type { AutomergeUrlResponse } from '@/lib/automerge/types';
 
 interface DocumentViewerProps {
   documentId: string | null;
@@ -25,6 +27,9 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [automergeUrl, setAutomergeUrl] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [useCollaborative, setUseCollaborative] = useState(false);
 
   useEffect(() => {
     if (!documentId) {
@@ -51,6 +56,17 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
         setDocument(data);
         setEditedContent(data.content);
         setIsEditing(false);
+        
+        // Fetch Automerge URL for collaborative editing
+        try {
+          const automergeResponse = await fetch(`${API_BASE}/api/v1/files/${documentId}/automerge`);
+          if (automergeResponse.ok) {
+            const { automergeUrl } = await automergeResponse.json() as AutomergeUrlResponse;
+            setAutomergeUrl(automergeUrl);
+          }
+        } catch (err) {
+          console.warn('Failed to get Automerge URL:', err);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load document');
         setDocument(null);
@@ -164,12 +180,35 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!isEditing ? (
+            {useCollaborative && (
+              <span className="flex items-center gap-2 text-sm text-gray-500">
+                <span className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                {isConnected ? 'Connected' : 'Connecting...'}
+              </span>
+            )}
+            {!isEditing && !useCollaborative ? (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                >
+                  Edit
+                </button>
+                {automergeUrl && (
+                  <button
+                    onClick={() => setUseCollaborative(true)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700"
+                  >
+                    Collaborate
+                  </button>
+                )}
+              </>
+            ) : useCollaborative ? (
               <button
-                onClick={() => setIsEditing(true)}
+                onClick={() => setUseCollaborative(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
               >
-                Edit
+                Exit Collaborative Mode
               </button>
             ) : (
               <>
@@ -195,11 +234,20 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
 
       {/* Editor */}
       <div className="flex-1 overflow-y-auto">
-        <Editor 
-          value={isEditing ? editedContent : document.content} 
-          onChange={isEditing ? setEditedContent : undefined}
-          readOnly={!isEditing} 
-        />
+        {useCollaborative && automergeUrl ? (
+          <CollaborativeEditor
+            documentUrl={automergeUrl}
+            readOnly={false}
+            onConnectionChange={setIsConnected}
+            placeholder="Start typing..."
+          />
+        ) : (
+          <Editor 
+            value={isEditing ? editedContent : document.content} 
+            onChange={isEditing ? setEditedContent : undefined}
+            readOnly={!isEditing} 
+          />
+        )}
       </div>
 
       {/* Error message */}

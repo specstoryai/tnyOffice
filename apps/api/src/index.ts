@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { log } from './utils/logger.js';
 import { initDB } from './db/database.js';
 import { initAutomergeRepo } from './automerge/repo.js';
+import { initWebSocketServer } from './websocket/server.js';
 import filesRouter from './routes/files.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,8 +31,16 @@ async function start(): Promise<void> {
     await initDB();
     initAutomergeRepo();
     
-    app.listen(PORT, () => {
+    // Create HTTP server
+    const httpServer = createServer(app);
+    
+    // Initialize WebSocket server
+    initWebSocketServer(httpServer);
+    
+    // Start the server
+    httpServer.listen(PORT, () => {
       log.info(`API server running on http://localhost:${PORT}`);
+      log.info(`WebSocket server ready on ws://localhost:${PORT}`);
     });
   } catch (error) {
     log.error('Failed to start server:', error);

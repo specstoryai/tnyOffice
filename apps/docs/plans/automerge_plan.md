@@ -4,6 +4,16 @@
 
 This plan outlines the integration of `@automerge/automerge-codemirror` to enable real-time collaborative editing in the TnyOffice Docs application. The integration will allow multiple users to edit markdown documents simultaneously with automatic conflict resolution using Automerge's CRDT (Conflict-free Replicated Data Type) technology.
 
+## Current Implementation Status ✅
+
+### Backend (Completed)
+- ✅ SQLite storage adapter for Automerge binary data
+- ✅ Automerge Repo initialized with storage
+- ✅ WebSocket server running on `/automerge-sync`
+- ✅ REST endpoints updated to use Automerge documents
+- ✅ New endpoint: `GET /api/v1/files/:id/automerge` returns document URL
+- ✅ Socket.io server for presence/awareness on `/socket.io/`
+
 ## Architecture Overview
 
 ### Current State
@@ -12,60 +22,61 @@ This plan outlines the integration of `@automerge/automerge-codemirror` to enabl
 - **Editor**: CodeMirror 6 with markdown syntax highlighting
 - **Storage**: Documents stored in SQLite with id, filename, content, timestamps
 
-### Target State
+### Target State  
 - **Frontend**: Same stack + Automerge for real-time sync
-- **Backend**: API extended with WebSocket support for real-time updates
+- **Backend**: ✅ API extended with WebSocket support for real-time updates
 - **Editor**: CodeMirror 6 + automerge-codemirror plugin
-- **Storage**: SQLite + Automerge document history/binary format
+- **Storage**: ✅ SQLite + Automerge document binary format in `automerge_storage` table
 
 ## Implementation Plan
 
-### Phase 1: Backend Infrastructure
+### Phase 1: Backend Infrastructure ✅ COMPLETED
 
-#### 1.1 Add Automerge to API Service
-```bash
-cd apps/api
-npm install @automerge/automerge @automerge/automerge-repo
-npm install ws @types/ws  # WebSocket support
-```
+#### 1.1 Add Automerge to API Service ✅
+- Installed `@automerge/automerge` and `@automerge/automerge-repo`
+- Installed `ws` for WebSocket support
+- Installed `@automerge/automerge-repo-network-websocket`
 
-#### 1.2 Create Automerge Document Model
-- Extend SQLite schema to store Automerge binary documents
-- Add columns: `automerge_binary` (BLOB), `automerge_heads` (TEXT)
-- Create conversion utilities between markdown and Automerge documents
+#### 1.2 Create Automerge Document Model ✅
+- Created `automerge_storage` table for binary storage
+- Added `automerge_id` column to `files` table
+- Created `DocumentService` for markdown ↔ Automerge conversion
+- Implemented `SQLiteStorageAdapter` for Automerge Repo
 
-#### 1.3 WebSocket Server Implementation
-- Add WebSocket server alongside Express
-- Create sync protocol for document updates
-- Handle client connections and document subscriptions
+#### 1.3 WebSocket Server Implementation ✅
+- WebSocket server running on `/automerge-sync` 
+- Using `WebSocketServerAdapter` for Automerge sync
+- Socket.io on `/socket.io/` for presence/awareness
 
-### Phase 2: Frontend Integration
+### Phase 2: Frontend Integration 🚧 IN PROGRESS
 
 #### 2.1 Install Dependencies
 ```bash
 cd apps/docs
-npm install @automerge/automerge @automerge/automerge-codemirror
+npm install @automerge/automerge @automerge/automerge-repo
+npm install @automerge/automerge-codemirror
 npm install @automerge/automerge-repo-network-websocket
 ```
 
 #### 2.2 Create Automerge Repository
 - Initialize Automerge Repo in the frontend
-- Configure WebSocket network adapter
-- Create document handles for each opened document
+- Configure `WebSocketClientAdapter` to connect to `ws://localhost:3001/automerge-sync`
+- Create document handles using the Automerge URL from API
 
-#### 2.3 Integrate automerge-codemirror Plugin
-- Modify `Editor.tsx` to use `automergeSyncPlugin`
-- Create `DocHandle` for each document
-- Configure bidirectional sync between CodeMirror and Automerge
+#### 2.3 Integrate automerge-codemirror Plugin  
+- Create `CollaborativeEditor.tsx` component
+- Use `automergeSyncPlugin` from `@automerge/automerge-codemirror`
+- Pass `DocHandle` from Automerge Repo
+- Configure path to document content field
 
 ### Phase 3: Synchronization Protocol
 
 #### 3.1 Document Loading Flow
-1. Client requests document by ID
-2. API returns document metadata + Automerge binary
-3. Client initializes Automerge document from binary
-4. Client creates CodeMirror instance with sync plugin
-5. WebSocket connection established for real-time updates
+1. Client requests document by ID via REST
+2. Client calls `/api/v1/files/:id/automerge` to get Automerge URL
+3. Client uses `repo.find(automergeUrl)` to get document handle
+4. Document syncs automatically via WebSocket
+5. CodeMirror instance created with sync plugin
 
 #### 3.2 Real-time Sync Flow
 1. User makes edit in CodeMirror
@@ -80,111 +91,140 @@ npm install @automerge/automerge-repo-network-websocket
 2. On disconnect, client's final state is persisted
 3. Conflict resolution handled automatically by Automerge
 
-## API Changes
+## API Changes ✅ IMPLEMENTED
 
 ### New Endpoints
 
-#### WebSocket Endpoint
+#### WebSocket Endpoints
 ```
-ws://localhost:3001/sync
+ws://localhost:3001/automerge-sync  # Automerge document sync
+ws://localhost:3001/socket.io/      # Presence/awareness
 ```
 
-#### Modified REST Endpoints
-
-##### GET /api/v1/files/:id
-Response includes:
+#### New REST Endpoint
+```
+GET /api/v1/files/:id/automerge
+```
+Returns:
 ```json
 {
-  "id": "uuid",
-  "filename": "document.md",
-  "content": "# Markdown content",
-  "automerge_binary": "base64_encoded_binary",
-  "created_at": 1234567890,
-  "updated_at": 1234567890
+  "automergeUrl": "automerge:abc123..."
 }
 ```
 
-##### PUT /api/v1/files/:id
-Accepts either:
-- Traditional JSON with content field
-- Automerge binary data for sync
+#### Modified REST Endpoints ✅
 
-### WebSocket Messages
+##### GET /api/v1/files/:id
+- Returns content from Automerge document if available
+- Falls back to SQLite content if no Automerge doc
+- Response structure unchanged for backward compatibility
 
-#### Client → Server
+##### PUT /api/v1/files/:id  
+- Creates Automerge document on first update
+- Updates both Automerge document and SQLite
+- Accepts traditional JSON with content field
+
+### WebSocket Protocol
+
+#### Automerge Sync (Handled Automatically)
+The `@automerge/automerge-repo-network-websocket` adapter handles the sync protocol automatically. No manual message handling needed.
+
+#### Presence/Awareness (Socket.io)
 ```typescript
-interface ClientMessage {
-  type: 'subscribe' | 'unsubscribe' | 'sync';
-  documentId: string;
-  data?: Uint8Array; // Automerge sync data
-}
-```
+// Client → Server
+socket.emit('join-doc', docId);
+socket.emit('presence', {
+  docId: string,
+  userId: string,
+  cursor?: { line: number, ch: number },
+  selection?: { from: Position, to: Position }
+});
+socket.emit('leave-doc', docId);
 
-#### Server → Client
-```typescript
-interface ServerMessage {
-  type: 'sync' | 'error' | 'subscribed';
-  documentId: string;
-  data?: Uint8Array; // Automerge sync data
-  error?: string;
-}
+// Server → Client  
+socket.on('presence', (data) => { /* handle presence update */ });
 ```
 
 ## Component Changes
 
-### Editor.tsx Modifications
+### New CollaborativeEditor.tsx Component
 ```typescript
 import { automergeSyncPlugin } from '@automerge/automerge-codemirror';
-import { DocHandle } from '@automerge/automerge-codemirror';
+import { useDocument } from '@automerge/automerge-repo-react-hooks';
+import type { MarkdownDocument } from '@/lib/automerge/types';
 
-// In editor setup:
-const docHandle = getDocumentHandle(documentId);
-const syncPlugin = automergeSyncPlugin({
-  handle: docHandle,
-  path: ['content'] // Path to text content in Automerge doc
-});
+interface CollaborativeEditorProps {
+  documentUrl: string;
+  onConnectionChange?: (connected: boolean) => void;
+}
 
-// Add to extensions:
-extensions: [
-  markdown(),
-  syncPlugin,
-  // ... other extensions
-]
+export function CollaborativeEditor({ documentUrl }: CollaborativeEditorProps) {
+  const [doc, changeDoc] = useDocument<MarkdownDocument>(documentUrl);
+  
+  const extensions = [
+    markdown(),
+    automergeSyncPlugin({
+      doc,
+      path: ['content'],
+      onChange: (updatedDoc) => changeDoc(updatedDoc)
+    }),
+    // ... other extensions
+  ];
+  
+  return <CodeMirror extensions={extensions} />;
+}
 ```
 
 ### DocumentViewer.tsx Changes
+- Replace Editor with CollaborativeEditor when Automerge URL available
 - Add connection status indicator
-- Show active collaborators
-- Handle offline mode gracefully
+- Show active collaborators via Socket.io presence
+- Handle offline mode with local-first editing
 
-## Database Schema Updates
+### New Automerge Context/Provider
+```typescript
+// lib/automerge/provider.tsx
+import { Repo } from '@automerge/automerge-repo';
+import { WebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket';
+import { RepoContext } from '@automerge/automerge-repo-react-hooks';
+
+export function AutomergeProvider({ children }: { children: React.ReactNode }) {
+  const repo = useMemo(() => {
+    const repo = new Repo({
+      network: [
+        new WebSocketClientAdapter('ws://localhost:3001/automerge-sync')
+      ]
+    });
+    return repo;
+  }, []);
+  
+  return (
+    <RepoContext.Provider value={repo}>
+      {children}
+    </RepoContext.Provider>
+  );
+}
+```
+
+## Database Schema Updates ✅ IMPLEMENTED
 
 ```sql
--- Add Automerge columns to files table
-ALTER TABLE files ADD COLUMN automerge_binary BLOB;
-ALTER TABLE files ADD COLUMN automerge_heads TEXT;
+-- Added to files table
+ALTER TABLE files ADD COLUMN automerge_id TEXT UNIQUE;
 
--- Create sync metadata table
-CREATE TABLE sync_metadata (
-  document_id TEXT PRIMARY KEY,
-  last_sync INTEGER DEFAULT (unixepoch()),
-  sync_version INTEGER DEFAULT 1,
-  FOREIGN KEY (document_id) REFERENCES files(id)
+-- Created automerge_storage table
+CREATE TABLE automerge_storage (
+  key TEXT PRIMARY KEY,
+  data BLOB NOT NULL,
+  created_at INTEGER DEFAULT (unixepoch())
 );
+
+-- Added index for efficient range queries
+CREATE INDEX idx_automerge_key_prefix ON automerge_storage(key);
 ```
 
 ## Testing Strategy
 
-### Unit Tests
-- Test Automerge document conversions
-- Test WebSocket message handling
-- Test sync protocol edge cases
-
-### Integration Tests
-- Test multi-client editing scenarios
-- Test conflict resolution
-- Test offline/online transitions
-- Test large document handling
 
 ### Manual Testing Scenarios
 1. Two users editing same document
@@ -193,80 +233,36 @@ CREATE TABLE sync_metadata (
 4. Network interruption during sync
 5. Server restart with active connections
 
-## Performance Considerations
 
-### Optimizations
-- Implement document lazy loading
-- Use Automerge binary format for efficiency
-- Batch WebSocket messages
-- Implement presence indicators efficiently
 
-### Monitoring
-- Track sync latency
-- Monitor WebSocket connection health
-- Log Automerge document size growth
-- Track active connections per document
+## Immediate Next Steps
 
-## Security Considerations
+1. **Install Frontend Dependencies**
+   ```bash
+   cd apps/docs
+   npm install @automerge/automerge @automerge/automerge-repo
+   npm install @automerge/automerge-codemirror  
+   npm install @automerge/automerge-repo-network-websocket
+   npm install @automerge/automerge-repo-react-hooks
+   ```
 
-### Authentication
-- Extend current auth to WebSocket connections
-- Validate document access permissions
-- Rate limit sync messages
+2. **Create Automerge Types**
+   - Define `MarkdownDocument` interface matching backend
 
-### Data Validation
-- Validate Automerge binary data
-- Sanitize all WebSocket messages
-- Implement max document size limits
+3. **Implement AutomergeProvider**
+   - Wrap app with Repo context
+   - Configure WebSocket connection
 
-## Migration Strategy
+4. **Create CollaborativeEditor Component**
+   - Use `automergeSyncPlugin` from `@automerge/automerge-codemirror`
+   - Handle document loading via `useDocument` hook
 
-### Rollout Plan
-1. Deploy backend with WebSocket support (backward compatible)
-2. Add Automerge columns to database
-3. Implement document migration utility
-4. Deploy frontend with opt-in collaboration
-5. Gradually enable for all documents
+5. **Update DocumentViewer**
+   - Fetch Automerge URL from new endpoint
+   - Switch between regular Editor and CollaborativeEditor
 
-### Rollback Plan
-- Keep markdown content in sync with Automerge
-- Allow disabling collaborative features
-- Export to plain markdown functionality
-
-## Future Enhancements
-
-1. **Presence Awareness**: Show cursor positions and selections
-2. **Comments**: Add inline comments using Automerge
-3. **Version History**: Browse and restore document versions
-4. **Conflict Visualization**: Show merge conflicts visually
-5. **Permission System**: Read-only viewers, edit permissions
-6. **Performance**: Implement Automerge compaction strategies
-
-## Dependencies Summary
-
-### Backend
-- @automerge/automerge
-- @automerge/automerge-repo
-- ws (WebSocket server)
-
-### Frontend
-- @automerge/automerge
-- @automerge/automerge-codemirror
-- @automerge/automerge-repo-network-websocket
-
-## Success Metrics
-
-- Sub-100ms sync latency for typical edits
-- Support for 10+ concurrent editors
-- Zero data loss during conflicts
-- Seamless offline/online transitions
-- Backward compatibility maintained
-
-## Timeline Estimate
-
-- Phase 1 (Backend): 3-4 days
-- Phase 2 (Frontend): 2-3 days
-- Phase 3 (Testing & Polish): 2-3 days
-- Total: ~1.5-2 weeks for MVP
+6. **Add Connection Status UI**
+   - Show sync status
+   - Handle offline gracefully
 
 This plan provides a comprehensive approach to integrating Automerge with the existing TnyOffice Docs application while maintaining stability and providing a clear upgrade path.

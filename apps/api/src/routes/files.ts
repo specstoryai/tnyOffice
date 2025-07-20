@@ -2,6 +2,7 @@ import express, { Request, Response, Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { log } from '../utils/logger.js';
 import { getDB } from '../db/database.js';
+import { DocumentService } from '../automerge/document-service.js';
 import { createFileSchema, listFilesSchema, updateFileSchema, isValidUUID } from '../validation.js';
 import { ZodError } from 'zod';
 import type { 
@@ -140,24 +141,35 @@ router.get('/:id', async (req: Request<{ id: string }>, res: Response<FileWithCo
     
     const db = getDB();
     const stmt = db.prepare(`
-      SELECT id, filename, content, created_at, updated_at
+      SELECT id, filename, content, created_at, updated_at, automerge_id
       FROM files
       WHERE id = ?
     `);
     
-    const file = stmt.get(id) as FileRow | undefined;
+    const file = stmt.get(id) as (FileRow & { automerge_id: string | null }) | undefined;
     
     if (!file) {
       return res.status(404).json({ error: 'File not found' });
     }
     
+    // If file has Automerge document, get content from there
+    let content = file.content;
+    if (file.automerge_id) {
+      try {
+        const handle = await DocumentService.getOrCreateDocument(id);
+        content = await DocumentService.getDocumentContent(handle);
+      } catch (err) {
+        log.warn(`Failed to get Automerge content for file ${id}, using database content:`, err);
+      }
+    }
+    
     const result: FileWithContent = {
       id: file.id,
       filename: file.filename,
-      content: file.content,
+      content: content,
       createdAt: new Date(file.created_at * 1000).toISOString(),
       updatedAt: new Date(file.updated_at * 1000).toISOString(),
-      size: Buffer.byteLength(file.content, 'utf8')
+      size: Buffer.byteLength(content, 'utf8')
     };
     
     log.info('GET /api/v1/files/[id] - Found:', result.id);
@@ -191,34 +203,25 @@ router.put('/:id', async (req: Request<{ id: string }, object, UpdateFileRequest
       return res.status(404).json({ error: 'File not found' });
     }
     
-    // Build dynamic update query
-    const updates: string[] = [];
-    const values: unknown[] = [];
+    // Get or create Automerge document
+    const handle = await DocumentService.getOrCreateDocument(id);
     
-    if (validatedData.filename !== undefined) {
-      updates.push('filename = ?');
-      values.push(validatedData.filename);
-    }
-    
+    // Update content in Automerge if provided
     if (validatedData.content !== undefined) {
-      updates.push('content = ?');
-      values.push(validatedData.content);
+      DocumentService.updateDocumentContent(handle, validatedData.content);
+      
+      // Sync back to database
+      await DocumentService.updateFileFromDocument(id, handle);
     }
     
-    // Always update the updated_at timestamp
-    updates.push('updated_at = ?');
-    values.push(Math.floor(Date.now() / 1000));
-    
-    // Add ID at the end for WHERE clause
-    values.push(id);
-    
-    const updateStmt = db.prepare(`
-      UPDATE files 
-      SET ${updates.join(', ')}
-      WHERE id = ?
-    `);
-    
-    updateStmt.run(...values);
+    // Update filename if provided (in database only for now)
+    if (validatedData.filename !== undefined) {
+      db.prepare(`
+        UPDATE files 
+        SET filename = ?, updated_at = unixepoch()
+        WHERE id = ?
+      `).run(validatedData.filename, id);
+    }
     
     // Fetch the updated file
     const selectStmt = db.prepare(`
@@ -250,6 +253,36 @@ router.put('/:id', async (req: Request<{ id: string }, object, UpdateFileRequest
     }
     
     log.error('Error updating file:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get Automerge document URL for a file
+router.get('/:id/automerge', async (req: Request<{ id: string }>, res: Response<{ automergeUrl: string } | ErrorResponse>) => {
+  log.info('GET /api/v1/files/[id]/automerge - Request received');
+  
+  try {
+    const { id } = req.params;
+    
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid file ID format' });
+    }
+    
+    const db = getDB();
+    const file = db.prepare('SELECT id FROM files WHERE id = ?').get(id);
+    
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Get or create Automerge document
+    const handle = await DocumentService.getOrCreateDocument(id);
+    
+    log.info(`GET /api/v1/files/[id]/automerge - Returning URL: ${handle.url}`);
+    return res.json({ automergeUrl: handle.url });
+    
+  } catch (error) {
+    log.error('Error getting Automerge URL:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
