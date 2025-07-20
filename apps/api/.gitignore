@@ -7,3 +7,4 @@ database.db-wal
 *.log
 dist
 *.tsbuildinfo
+git-repo/

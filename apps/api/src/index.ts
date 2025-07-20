@@ -8,6 +8,7 @@ import { initDB } from './db/database.js';
 import { initAutomergeRepo } from './automerge/repo.js';
 import { initWebSocketServer } from './websocket/server.js';
 import filesRouter from './routes/files.js';
+import gitRouter from './routes/git.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/api/v1/files', filesRouter);
+app.use('/api/v1/git', gitRouter);
 
 // Initialize database and start server
 async function start(): Promise<void> {
