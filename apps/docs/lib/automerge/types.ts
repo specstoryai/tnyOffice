@@ -1,4 +1,4 @@
-import { DocumentId } from '@automerge/automerge-repo';
+// Types for Automerge integration
 
 // Define the structure of our Automerge document
 // This should match the backend MarkdownDocument interface

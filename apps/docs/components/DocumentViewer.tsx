@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Editor } from './Editor';
 import { CollaborativeEditor } from './ClientOnlyCollaborativeEditor';
 import type { AutomergeUrlResponse } from '@/lib/automerge/types';

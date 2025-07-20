@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
@@ -85,7 +85,7 @@ export function CollaborativeEditor({
 
     loadDocument();
 
-  }, [repo, documentUrl]);
+  }, [repo, documentUrl, onConnectionChange]);
 
   // Listen for changes on the handle
   useEffect(() => {

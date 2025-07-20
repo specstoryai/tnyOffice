@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { log } from '@tnyoffice/logger';
 
 interface FileMetadata {
@@ -28,7 +28,7 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
   const [hasMore, setHasMore] = useState(true);
   const limit = 20;
 
-  const fetchDocuments = async (reset = false) => {
+  const fetchDocuments = useCallback(async (reset = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -63,10 +63,11 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
     } finally {
       setLoading(false);
     }
-  };
+  }, [offset, limit]);
 
   useEffect(() => {
     fetchDocuments(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
 
   // Auto-refresh every 30 seconds
@@ -75,6 +76,7 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
       fetchDocuments(true);
     }, 30000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const formatDate = (dateString: string) => {

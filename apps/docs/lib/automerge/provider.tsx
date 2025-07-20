@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RepoContext } from '@automerge/automerge-repo-react-hooks';
 import type { Repo } from '@automerge/automerge-repo';
 
