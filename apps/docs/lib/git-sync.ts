@@ -17,7 +17,7 @@ export interface GitSyncResult {
 
 export async function syncToGit(remoteUrl?: string, commitMessage?: string): Promise<GitSyncResult> {
   try {
-    const body: any = {};
+    const body: Record<string, string> = {};
     if (remoteUrl) body.remoteUrl = remoteUrl;
     if (commitMessage) body.commitMessage = commitMessage;
 

@@ -147,7 +147,7 @@ export class GitSyncService {
       try {
         const files = await fs.readdir(documentsDir);
         files.forEach(file => existingFiles.add(file));
-      } catch (error) {
+      } catch {
         // Directory might not exist yet
         await fs.mkdir(documentsDir, { recursive: true });
       }
@@ -295,15 +295,18 @@ export class GitSyncService {
         log.info('Push result:', pushResult);
         log.info('Successfully pushed to remote repository');
         return { pushed: true, remoteUrl: remoteUrl.replace(/:[^@]+@/, ':***@') };
-      } catch (pushError: any) {
+      } catch (pushError) {
+        const errorMessage = pushError instanceof Error ? pushError.message : String(pushError);
+        const errorStack = pushError instanceof Error ? pushError.stack : undefined;
+        
         log.error('Push error details:', {
-          message: pushError.message,
-          stack: pushError.stack
+          message: errorMessage,
+          stack: errorStack
         });
         
         // If push fails, might need to set upstream
-        if (pushError.message?.includes('has no upstream branch') || 
-            pushError.message?.includes('no upstream configured')) {
+        if (errorMessage.includes('has no upstream branch') || 
+            errorMessage.includes('no upstream configured')) {
           log.info('No upstream branch configured, setting upstream and pushing...');
           const pushWithUpstream = await this.git.push('origin', currentBranch, ['--set-upstream']);
           log.info('Push with upstream result:', pushWithUpstream);
@@ -313,11 +316,13 @@ export class GitSyncService {
           throw pushError;
         }
       }
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      
       log.error('Failed to push to remote:', {
-        message: error.message,
-        stack: error.stack,
-        gitError: error.git
+        message: errorMessage,
+        stack: errorStack
       });
       // Don't throw - push failure shouldn't fail the sync
       return { pushed: false, remoteUrl: remoteUrl.replace(/:[^@]+@/, ':***@') };

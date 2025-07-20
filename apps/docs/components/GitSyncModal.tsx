@@ -9,8 +9,6 @@ interface GitSyncModalProps {
   onSync: (remoteUrl?: string, commitMessage?: string) => Promise<void>;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 export function GitSyncModal({ isOpen, onClose, onSync }: GitSyncModalProps) {
   const [remoteUrl, setRemoteUrl] = useState('');
   const [commitMessage, setCommitMessage] = useState('');
