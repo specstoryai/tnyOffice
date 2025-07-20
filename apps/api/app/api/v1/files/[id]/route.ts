@@ -5,7 +5,7 @@ import { corsHeaders, corsResponse } from '@/lib/cors';
 import { log } from '@tnyoffice/logger';
 
 // Handle OPTIONS for CORS preflight
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, { status: 200, headers: corsHeaders() });
 }
 

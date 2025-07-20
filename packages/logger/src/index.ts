@@ -1,16 +1,16 @@
 const isProd = process.env.NODE_ENV === 'production'
 
 export const log = {
-  info: (...args: any[]) => {
+  info: (...args: unknown[]) => {
     if (!isProd) console.info('[INFO]', ...args)
   },
-  warn: (...args: any[]) => {
+  warn: (...args: unknown[]) => {
     if (!isProd) console.warn('[WARN]', ...args)
   },
-  error: (...args: any[]) => {
+  error: (...args: unknown[]) => {
     console.error('[ERROR]', ...args)
   },
-  debug: (...args: any[]) => {
+  debug: (...args: unknown[]) => {
     if (!isProd) console.debug('[DEBUG]', ...args)
   },
 }

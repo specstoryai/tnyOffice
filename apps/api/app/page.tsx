@@ -4,7 +4,14 @@ import { useState } from 'react';
 
 export default function ApiDocumentation() {
   const [activeTab, setActiveTab] = useState<'create' | 'get' | 'list'>('create');
-  const [testResults, setTestResults] = useState<any>(null);
+  const [testResults, setTestResults] = useState<{
+    status?: number;
+    statusText?: string;
+    data?: unknown;
+    elapsed?: number;
+    headers?: Record<string, string>;
+    error?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Test states
@@ -20,7 +27,7 @@ export default function ApiDocumentation() {
 
     try {
       let response: Response;
-      let startTime = Date.now();
+      const startTime = Date.now();
 
       switch (activeTab) {
         case 'create':
@@ -48,10 +55,9 @@ export default function ApiDocumentation() {
         elapsed,
         headers: Object.fromEntries(response.headers.entries())
       });
-    } catch (error: any) {
+    } catch (error) {
       setTestResults({
-        error: error.message || 'Request failed',
-        status: 'error'
+        error: error instanceof Error ? error.message : 'Request failed'
       });
     } finally {
       setLoading(false);
@@ -87,7 +93,7 @@ export default function ApiDocumentation() {
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as 'create' | 'get' | 'list')}
                   className={`py-4 px-6 font-medium text-sm border-b-2 transition-colors ${
                     activeTab === tab.id
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'

@@ -6,7 +6,7 @@ import { ZodError } from 'zod';
 import { log } from '@tnyoffice/logger';
 
 // Handle OPTIONS for CORS preflight
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, { status: 200, headers: corsHeaders() });
 }
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof ZodError) {
       return corsResponse(
-        { error: 'Invalid request', details: error.errors },
+        { error: 'Invalid request', details: error.issues },
         400
       );
     }
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     if (error instanceof ZodError) {
       return corsResponse(
-        { error: 'Invalid query parameters', details: error.errors },
+        { error: 'Invalid query parameters', details: error.issues },
         400
       );
     }

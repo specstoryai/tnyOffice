@@ -42,9 +42,7 @@ npm run build
 ## Apps
 
 ### API Service (`apps/api`)
-Centralized API for file management and shared backend functionality.
-
-### Documentation (`apps/docs`)
+Centralized API for file management and shared backend funDocumentation application
 Collaborative markdown docs app (like GDocs).
 
 ## Adding New Apps
@@ -91,14 +89,44 @@ NODE_ENV=production npm run start
 
 ## Workspace Management
 
-This monorepo uses npm workspaces. All apps and packages share dependencies at the root level when possible.
+This monorepo uses npm workspaces and Turbo for efficient builds and development.
 
 ### Running Commands
-- All apps: `npm run dev`
-- Specific app: `npm run dev --workspace=apps/api`
+- **Development**: `npm run dev` - Runs all apps concurrently
+- **Building**: `npm run build` - Builds all apps
+- **Linting**: `npm run lint` - Runs ESLint across all workspaces
+- **Type Checking**: `npm run typecheck` - Runs TypeScript type checking
+- **Full Check**: `npm run check-all` - Runs both lint and typecheck
+
+### Specific Workspace Commands
+Run commands for a specific app:
+```bash
+npm run dev -w api      # Run only the API app
+npm run lint -w docs    # Lint only the docs app
+```
+
+## Code Quality
+
+### ESLint Configuration
+The monorepo enforces strict linting rules to ensure code quality and prevent deployment issues:
+- TypeScript strict mode
+- No unused variables (prefix with `_` to ignore)
+- No `any` types
+- No `console.log` (use the logger package instead)
+- Enforces `const` over `let` when possible
+
+### TypeScript Configuration
+- Strict type checking enabled
+- No implicit `any`
+- Unused locals and parameters are errors
+- Consistent casing in file names required
 
 ## Contributing
 
 1. Create feature branches from `main`
-2. Follow existing code patterns
-3. Ensure all apps build successfully before committing
+2. Run `npm run check-all` before committing to ensure:
+   - All TypeScript types are correct
+   - ESLint rules pass
+   - Code follows project conventions
+3. Use the logger package instead of `console.log`
+4. Ensure all apps build successfully before creating PRs
