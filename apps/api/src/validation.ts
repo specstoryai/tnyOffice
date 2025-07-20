@@ -20,9 +20,23 @@ export const listFilesSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0)
 });
 
+export const updateFileSchema = z.object({
+  filename: z.string()
+    .min(1, 'Filename is required')
+    .max(255, 'Filename too long')
+    .regex(FILENAME_REGEX, 'Invalid filename format. Use alphanumeric characters, dashes, or underscores with .md extension')
+    .optional(),
+  content: z.string()
+    .max(5 * 1024 * 1024, 'Content too large (max 5MB)')
+    .optional()
+}).refine(data => data.filename || data.content, {
+  message: 'At least one field (filename or content) must be provided'
+});
+
 export function isValidUUID(id: string): boolean {
   return UUID_REGEX.test(id);
 }
 
 export type CreateFileInput = z.infer<typeof createFileSchema>;
 export type ListFilesInput = z.infer<typeof listFilesSchema>;
+export type UpdateFileInput = z.infer<typeof updateFileSchema>;

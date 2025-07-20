@@ -22,6 +22,11 @@ export interface CreateFileRequest {
   content: string;
 }
 
+export interface UpdateFileRequest {
+  filename?: string;
+  content?: string;
+}
+
 export interface ErrorResponse {
   error: string;
   details?: unknown;

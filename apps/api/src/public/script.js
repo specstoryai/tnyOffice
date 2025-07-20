@@ -13,6 +13,7 @@ const filesList = document.getElementById('filesList');
 const createForm = document.getElementById('createForm');
 const listForm = document.getElementById('listForm');
 const getForm = document.getElementById('getForm');
+const updateForm = document.getElementById('updateForm');
 
 // Helper function to show response
 function showResponse(status, data, time) {
@@ -167,6 +168,34 @@ getForm.addEventListener('submit', async (e) => {
     const fileId = formData.get('fileId');
     
     await makeRequest('GET', `${API_BASE}/${fileId}`);
+});
+
+// Handle update form submission
+updateForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(updateForm);
+    const fileId = formData.get('updateFileId');
+    
+    // Build update body with only provided fields
+    const body = {};
+    const filename = formData.get('updateFilename');
+    const content = formData.get('updateContent');
+    
+    if (filename) body.filename = filename;
+    if (content) body.content = content;
+    
+    // Check if at least one field is provided
+    if (Object.keys(body).length === 0) {
+        showResponse(400, { error: 'At least one field (filename or content) must be provided' }, 0);
+        return;
+    }
+    
+    const result = await makeRequest('PUT', `${API_BASE}/${fileId}`, body);
+    
+    // If successful, copy the file ID to clipboard
+    if (result && result.status === 200) {
+        navigator.clipboard.writeText(fileId);
+    }
 });
 
 // Load initial files list on page load

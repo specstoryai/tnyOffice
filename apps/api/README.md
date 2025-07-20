@@ -40,6 +40,7 @@ npm run start
 - `POST /api/v1/files` - Create a new markdown file
 - `GET /api/v1/files` - List all files with pagination
 - `GET /api/v1/files/:id` - Get a specific file by ID
+- `PUT /api/v1/files/:id` - Update a file's filename and/or content
 
 ## Database
 
@@ -70,6 +71,11 @@ curl http://localhost:3001/api/v1/files?limit=20&offset=0
 
 # Get a file by ID
 curl http://localhost:3001/api/v1/files/{id}
+
+# Update a file
+curl -X PUT http://localhost:3001/api/v1/files/{id} \
+  -H "Content-Type: application/json" \
+  -d '{"filename": "updated.md", "content": "# Updated Document\n\nNew content."}'
 ```
 
 ## Implementation Details

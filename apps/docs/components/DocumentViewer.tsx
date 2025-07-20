@@ -22,6 +22,9 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
   const [document, setDocument] = useState<FileWithContent | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!documentId) {
@@ -46,6 +49,8 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
         
         const data = await response.json();
         setDocument(data);
+        setEditedContent(data.content);
+        setIsEditing(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load document');
         setDocument(null);
@@ -71,6 +76,42 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleSave = async () => {
+    if (!document || !documentId) return;
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/api/v1/files/${documentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: editedContent,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save document');
+      }
+
+      const updatedData = await response.json();
+      setDocument(updatedData);
+      setIsEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save document');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditedContent(document?.content || '');
+    setIsEditing(false);
   };
 
   if (!documentId) {
@@ -113,18 +154,60 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
     <div className="flex flex-col h-full">
       {/* Document header */}
       <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          {document.filename}
-        </h1>
-        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Last updated: {formatDate(document.updatedAt)} • {formatSize(document.size)}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              {document.filename}
+            </h1>
+            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Last updated: {formatDate(document.updatedAt)} • {formatSize(document.size)}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+              >
+                Edit
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                  disabled={isSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Editor */}
       <div className="flex-1 overflow-y-auto">
-        <Editor value={document.content} readOnly={true} />
+        <Editor 
+          value={isEditing ? editedContent : document.content} 
+          onChange={isEditing ? setEditedContent : undefined}
+          readOnly={!isEditing} 
+        />
       </div>
+
+      {/* Error message */}
+      {error && isEditing && (
+        <div className="px-6 py-3 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      )}
     </div>
   );
 }
