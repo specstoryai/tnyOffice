@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { log } from '@tnyoffice/logger';
+import { GitBranch } from 'lucide-react';
+import { GitSyncModal } from './GitSyncModal';
+import { syncToGit } from '../lib/git-sync';
 
 interface FileMetadata {
   id: string;
@@ -26,6 +29,7 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
   const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [showGitSync, setShowGitSync] = useState(false);
   const limit = 20;
 
   const fetchDocuments = useCallback(async (reset = false) => {
@@ -93,15 +97,32 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const handleGitSync = async (remoteUrl?: string, commitMessage?: string) => {
+    const result = await syncToGit(remoteUrl, commitMessage);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Sync failed');
+    }
+    
+    log.info('Git sync successful:', result);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
         <button
           onClick={onCreateNew}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
           New Document
+        </button>
+        <button
+          onClick={() => setShowGitSync(true)}
+          className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+        >
+          <GitBranch size={18} />
+          Sync to Git
         </button>
       </div>
 
@@ -144,6 +165,13 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
           </>
         )}
       </div>
+
+      {/* Git Sync Modal */}
+      <GitSyncModal
+        isOpen={showGitSync}
+        onClose={() => setShowGitSync(false)}
+        onSync={handleGitSync}
+      />
     </div>
   );
 }
