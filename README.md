@@ -42,7 +42,9 @@ npm run build
 ## Apps
 
 ### API Service (`apps/api`)
-Centralized API for file management and shared backend funDocumentation application
+Centralized API for file management and shared backend functionality.
+
+### Documents (`apps/docs`)
 Collaborative markdown docs app (like GDocs).
 
 ## Adding New Apps
@@ -107,19 +109,56 @@ npm run lint -w docs    # Lint only the docs app
 
 ## Code Quality
 
-### ESLint Configuration
-The monorepo enforces strict linting rules to ensure code quality and prevent deployment issues:
-- TypeScript strict mode
-- No unused variables (prefix with `_` to ignore)
-- No `any` types
-- No `console.log` (use the logger package instead)
-- Enforces `const` over `let` when possible
+### Linting and Type Checking
 
-### TypeScript Configuration
-- Strict type checking enabled
-- No implicit `any`
-- Unused locals and parameters are errors
-- Consistent casing in file names required
+This monorepo uses a comprehensive linting and type checking setup to catch errors before deployment:
+
+#### ESLint Configuration
+- **ESLint v9** with the new flat config format
+- **TypeScript ESLint** for TypeScript-specific rules
+- **Strict rules** to ensure code quality:
+  - No unused variables (prefix with `_` to ignore)
+  - No `any` types allowed
+  - No `console.log` (use the logger package instead)
+  - Enforces `const` over `let` when possible
+  - Consistent code style across all packages
+
+#### TypeScript Configuration
+- **Strict mode** enabled for maximum type safety
+- **No implicit `any`** - all types must be explicit
+- **Unused locals and parameters** are treated as errors
+- **Consistent casing** in file names required
+- Each app/package has its own `tsconfig.json` extending from root
+
+#### Running Checks
+```bash
+# Run all linting across the monorepo
+npm run lint
+
+# Run TypeScript type checking
+npm run typecheck
+
+# Run both lint and typecheck
+npm run check-all
+
+# Run everything including build (mimics Vercel deployment)
+npm run check-build
+```
+
+#### Package-Specific Configuration
+- **Next.js apps** use Next.js's built-in ESLint config with additional strict rules
+- **Logger package** has custom ESLint config to allow console usage
+- All packages use the latest versions:
+  - ESLint v9.31.0
+  - TypeScript v5.8.3
+  - @typescript-eslint v8.37.0
+
+#### Why This Matters
+Vercel runs both linting and type checking during deployment. Our setup ensures:
+1. **No deployment failures** due to type errors
+2. **Consistent code quality** across the monorepo
+3. **Early error detection** during development
+4. **Production-ready code** with no debug logs
 
 ## Contributing
 
