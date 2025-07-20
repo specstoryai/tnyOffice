@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { log } from '../utils/logger.js';
 import { getDB } from '../db/database.js';
+import { DocumentService } from '../automerge/document-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,10 +85,11 @@ export class GitSyncService {
 
       // Get all documents from database
       const db = getDB();
-      const documents = db.prepare('SELECT id, filename, content, updated_at FROM files').all() as Array<{
+      const documents = db.prepare('SELECT id, filename, content, automerge_id, updated_at FROM files').all() as Array<{
         id: string;
         filename: string;
         content: string | null;
+        automerge_id: string | null;
         updated_at: number;
       }>;
 
@@ -115,21 +117,32 @@ export class GitSyncService {
         processedFiles.add(gitFilename);
 
         try {
-          // Check if file exists and compare timestamps
+          // Get current content - from Automerge if available, otherwise from SQLite
+          let currentContent = doc.content || '';
+          if (doc.automerge_id) {
+            try {
+              const handle = await DocumentService.getOrCreateDocument(doc.id);
+              currentContent = await DocumentService.getDocumentContent(handle);
+            } catch (err) {
+              log.warn(`Failed to get Automerge content for file ${doc.id}, using database content:`, err);
+            }
+          }
+
+          // Check if file exists and compare content
           const fileExists = existingFiles.has(gitFilename);
           
           if (!fileExists) {
             // New file
-            await fs.writeFile(filePath, doc.content || '');
+            await fs.writeFile(filePath, currentContent);
             await this.git.add(path.join('documents', gitFilename));
             result.changes.added.push(gitFilename);
             log.info('Added new file to git:', gitFilename);
           } else {
             // Check if content has changed
             const existingContent = await fs.readFile(filePath, 'utf-8');
-            if (existingContent !== (doc.content || '')) {
+            if (existingContent !== currentContent) {
               // Modified file
-              await fs.writeFile(filePath, doc.content || '');
+              await fs.writeFile(filePath, currentContent);
               await this.git.add(path.join('documents', gitFilename));
               result.changes.modified.push(gitFilename);
               log.info('Updated file in git:', gitFilename);
