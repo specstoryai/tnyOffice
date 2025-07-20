@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CollaborativeEditor } from './ClientOnlyCollaborativeEditor';
 import { CommentsSidebar } from './CommentsSidebar';
 import { AddCommentModal } from './AddCommentModal';
@@ -8,6 +8,7 @@ import { getComments, createComment } from '@/lib/api/comments';
 import type { AutomergeUrlResponse } from '@/lib/automerge/types';
 import type { Comment } from '@/lib/types/comment';
 import { MessageSquarePlus } from 'lucide-react';
+import { EditorView } from '@codemirror/view';
 
 interface DocumentViewerWithCommentsProps {
   documentId: string | null;
@@ -30,6 +31,7 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
   const [error, setError] = useState<string | null>(null);
   const [automergeUrl, setAutomergeUrl] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const editorRef = useRef<EditorView | null>(null);
   
   // Comments state
   const [comments, setComments] = useState<Comment[]>([]);
@@ -153,8 +155,21 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
   };
 
   const handleCommentClick = useCallback((comment: Comment) => {
-    // TODO: Scroll to and highlight the comment in the editor
-    console.log('Comment clicked:', comment);
+    // Don't scroll for orphaned comments
+    if (comment.status === 'orphaned' || !editorRef.current) {
+      return;
+    }
+    
+    const view = editorRef.current;
+    const pos = comment.resolvedStart ?? comment.anchorStart;
+    
+    // Scroll the position into view
+    view.dispatch({
+      effects: EditorView.scrollIntoView(pos, {
+        y: 'center', // Center vertically
+        x: 'start',  // Align to start horizontally
+      })
+    });
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -250,6 +265,7 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
               placeholder="Start typing..."
               onAddComment={handleAddComment}
               comments={comments}
+              editorRef={editorRef}
               onCommentClick={(position: number) => {
                 // Find comment at this position
                 const comment = comments.find(c => 

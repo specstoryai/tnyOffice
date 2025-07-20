@@ -20,6 +20,7 @@ export interface CollaborativeEditorProps {
   onAddComment?: (selection: { from: number; to: number; text: string }) => void;
   comments?: Comment[];
   onCommentClick?: (position: number) => void;
+  editorRef?: React.MutableRefObject<EditorView | null>;
 }
 
 export function CollaborativeEditor({ 
@@ -30,7 +31,8 @@ export function CollaborativeEditor({
   onContentChange,
   onAddComment,
   comments = [],
-  onCommentClick
+  onCommentClick,
+  editorRef
 }: CollaborativeEditorProps) {
   const repo = useRepo();
   const [handle, setHandle] = useState<DocHandle<MarkdownDocument> | null>(null);
@@ -239,6 +241,9 @@ export function CollaborativeEditor({
       style={{ height: '100%' }}
       onCreateEditor={(view) => {
         editorViewRef.current = view;
+        if (editorRef) {
+          editorRef.current = view;
+        }
       }}
     />
   );
