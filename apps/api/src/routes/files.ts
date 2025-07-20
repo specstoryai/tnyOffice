@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { log } from '../utils/logger.js';
 import { getDB } from '../db/database.js';
 import { DocumentService } from '../automerge/document-service.js';
-import { createFileSchema, listFilesSchema, updateFileSchema, isValidUUID } from '../validation.js';
+import { createFileSchema, listFilesSchema, updateFileSchema, isValidUUID, createCommentSchema } from '../validation.js';
 import { ZodError } from 'zod';
 import type { 
   FileMetadata, 
@@ -13,6 +13,8 @@ import type {
   UpdateFileRequest,
   ErrorResponse 
 } from '../types.js';
+import type { Comment } from '../automerge/types.js';
+import type { CreateCommentInput } from '../validation.js';
 
 const router: Router = express.Router();
 
@@ -283,6 +285,153 @@ router.get('/:id/automerge', async (req: Request<{ id: string }>, res: Response<
     
   } catch (error) {
     log.error('Error getting Automerge URL:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a comment on a file
+router.post('/:id/comments', async (req: Request<{ id: string }, object, CreateCommentInput>, res: Response<Comment | ErrorResponse>) => {
+  log.info('POST /api/v1/files/[id]/comments - Request received');
+  
+  try {
+    const { id } = req.params;
+    
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid file ID format' });
+    }
+    
+    const validatedData = createCommentSchema.parse(req.body);
+    const db = getDB();
+    
+    // Check if file exists
+    const file = db.prepare('SELECT id FROM files WHERE id = ?').get(id);
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Get Automerge document
+    const handle = await DocumentService.getOrCreateDocument(id);
+    
+    // Create comment
+    const comment: Comment = {
+      id: uuidv4(),
+      author: validatedData.author,
+      text: validatedData.text,
+      createdAt: Date.now(),
+      anchorStart: validatedData.anchorStart,
+      anchorEnd: validatedData.anchorEnd
+    };
+    
+    // Add comment to document
+    handle.change((doc) => {
+      if (!doc.comments) {
+        doc.comments = {};
+      }
+      doc.comments[comment.id] = comment;
+    });
+    
+    log.info(`POST /api/v1/files/[id]/comments - Created comment ${comment.id} on file ${id}`);
+    return res.status(201).json(comment);
+    
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ 
+        error: 'Invalid request', 
+        details: error.issues 
+      });
+    }
+    
+    log.error('Error creating comment:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get all comments for a file
+router.get('/:id/comments', async (req: Request<{ id: string }>, res: Response<Comment[] | ErrorResponse>) => {
+  log.info('GET /api/v1/files/[id]/comments - Request received');
+  
+  try {
+    const { id } = req.params;
+    
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid file ID format' });
+    }
+    
+    const db = getDB();
+    const file = db.prepare('SELECT id, automerge_id FROM files WHERE id = ?').get(id) as { id: string; automerge_id: string | null } | undefined;
+    
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // If no Automerge document yet, return empty array
+    if (!file.automerge_id) {
+      return res.json([]);
+    }
+    
+    // Get comments from Automerge document
+    const handle = await DocumentService.getOrCreateDocument(id);
+    await handle.doc(); // Ensure document is loaded
+    const doc = handle.docSync();
+    
+    if (!doc || !doc.comments) {
+      return res.json([]);
+    }
+    
+    const comments = Object.values(doc.comments);
+    
+    log.info(`GET /api/v1/files/[id]/comments - Found ${comments.length} comments for file ${id}`);
+    return res.json(comments);
+    
+  } catch (error) {
+    log.error('Error getting comments:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a comment from a file
+router.delete('/:id/comments/:commentId', async (req: Request<{ id: string; commentId: string }>, res: Response<{ success: boolean } | ErrorResponse>) => {
+  log.info('DELETE /api/v1/files/[id]/comments/[commentId] - Request received');
+  
+  try {
+    const { id, commentId } = req.params;
+    
+    if (!isValidUUID(id) || !isValidUUID(commentId)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
+    
+    const db = getDB();
+    const file = db.prepare('SELECT id, automerge_id FROM files WHERE id = ?').get(id) as { id: string; automerge_id: string | null } | undefined;
+    
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    if (!file.automerge_id) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+    
+    // Get Automerge document
+    const handle = await DocumentService.getOrCreateDocument(id);
+    await handle.doc(); // Ensure document is loaded
+    const doc = handle.docSync();
+    
+    if (!doc || !doc.comments || !doc.comments[commentId]) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+    
+    // Delete comment from document
+    handle.change((doc) => {
+      if (doc.comments && doc.comments[commentId]) {
+        delete doc.comments[commentId];
+      }
+    });
+    
+    log.info(`DELETE /api/v1/files/[id]/comments/[commentId] - Deleted comment ${commentId} from file ${id}`);
+    return res.json({ success: true });
+    
+  } catch (error) {
+    log.error('Error deleting comment:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

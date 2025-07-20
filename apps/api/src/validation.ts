@@ -37,6 +37,16 @@ export function isValidUUID(id: string): boolean {
   return UUID_REGEX.test(id);
 }
 
+export const createCommentSchema = z.object({
+  author: z.string().min(1, 'Author is required').max(100, 'Author too long'),
+  text: z.string().min(1, 'Comment text is required').max(1000, 'Comment too long'),
+  anchorStart: z.number().int().min(0, 'Anchor start must be non-negative'),
+  anchorEnd: z.number().int().min(0, 'Anchor end must be non-negative')
+}).refine(data => data.anchorEnd >= data.anchorStart, {
+  message: 'Anchor end must be greater than or equal to anchor start'
+});
+
 export type CreateFileInput = z.infer<typeof createFileSchema>;
 export type ListFilesInput = z.infer<typeof listFilesSchema>;
 export type UpdateFileInput = z.infer<typeof updateFileSchema>;
+export type CreateCommentInput = z.infer<typeof createCommentSchema>;

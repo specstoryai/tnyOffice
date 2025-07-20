@@ -37,6 +37,7 @@ export class DocumentService {
       // Initialize document with current content
       handle.change((doc) => {
         doc.content = file.content || '';
+        doc.comments = {};
         doc.metadata = {
           filename: file.filename,
           createdAt: Date.now(),
