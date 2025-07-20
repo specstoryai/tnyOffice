@@ -42,11 +42,15 @@ npm run start
 
 ### REST Endpoints
 
+#### Files API
 - `POST /api/v1/files` - Create a new markdown file
 - `GET /api/v1/files` - List all files with pagination
 - `GET /api/v1/files/:id` - Get a specific file by ID (with Automerge sync)
 - `PUT /api/v1/files/:id` - Update a file (creates/updates Automerge document)
 - `GET /api/v1/files/:id/automerge` - Get Automerge document URL for real-time sync
+
+#### Git API
+- `POST /api/v1/git/sync` - Sync all documents to local git repository
 
 ### WebSocket Endpoints
 
@@ -98,6 +102,9 @@ curl http://localhost:3001/api/v1/files/{id}
 curl -X PUT http://localhost:3001/api/v1/files/{id} \
   -H "Content-Type: application/json" \
   -d '{"filename": "updated.md", "content": "# Updated Document\n\nNew content."}'
+
+# Sync documents to git
+curl -X POST http://localhost:3001/api/v1/git/sync
 ```
 
 ## Real-time Collaboration
@@ -117,11 +124,52 @@ Browser ↔ WebSocket ↔ Express Server ↔ Automerge Repo
                      ↔ REST API      ↔ SQLite Storage
 ```
 
+## Git Integration
+
+The API includes git synchronization capabilities to export all documents to a local git repository:
+
+### Features
+- Automatic git repository initialization
+- Exports all documents as markdown files
+- Tracks additions, modifications, and deletions
+- Preserves document IDs in filenames to avoid conflicts
+- Fetches latest content from Automerge for edited documents
+
+### Git Repository Structure
+```
+# Production: /data/git-repo/
+# Development: apps/api/git-repo/
+git-repo/
+├── .git/
+├── documents/
+│   ├── {id}-{filename}  # e.g., "abc123-readme.md"
+│   └── ...
+└── .gitignore
+```
+
+### Usage
+```bash
+# Sync all documents to git
+curl -X POST http://localhost:3001/api/v1/git/sync
+
+# Response
+{
+  "success": true,
+  "commitHash": "a1b2c3d4...",
+  "changes": {
+    "added": ["123-readme.md"],
+    "modified": ["456-spec.md"],
+    "deleted": []
+  }
+}
+```
+
 ## Implementation Details
 
 - **Database**: SQLite with better-sqlite3 for synchronous operations
 - **Real-time**: Automerge 3.0 + Automerge Repo 2.1 for CRDT synchronization
 - **WebSocket**: Native WebSocket for Automerge, Socket.io for presence
+- **Git Integration**: simple-git for version control operations
 - **IDs**: UUIDs generated with uuid package
 - **Validation**: Zod schemas for input validation
 - **Logging**: Uses @tnyoffice/logger for consistent logging

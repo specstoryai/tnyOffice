@@ -1,8 +1,17 @@
 # Git Integration Plan - Document Synchronization
 
+## Status: ✅ IMPLEMENTED
+
 ## Overview
 
 This plan outlines a simple, prototype-level approach to adding git capabilities to the TnyOffice API, allowing all documents stored in the SQLite database to be synchronized with a git repository.
+
+### Implementation Summary
+- ✅ Git sync endpoint created at `/api/v1/git/sync`
+- ✅ Automatic repository initialization
+- ✅ Environment-based paths (development vs production)
+- ✅ Automerge-aware content fetching
+- ✅ Add/modify/delete tracking with single commit per sync
 
 ## Goals
 
@@ -192,29 +201,52 @@ curl -X POST http://localhost:3001/api/v1/git/sync
 }
 ```
 
-## Implementation Steps
+## Implementation Steps (✅ Completed)
 
-1. **Install Dependencies**
+1. **Install Dependencies** ✅
    ```bash
    npm install simple-git
    ```
 
-2. **Create Git Service**
+2. **Create Git Service** ✅
    - Initialize repository if not exists
    - Implement sync logic
    - Handle edge cases
 
-3. **Add API Endpoint**
+3. **Add API Endpoint** ✅
    - Route handler
    - Input validation
    - Error responses
 
-4. **Test Thoroughly**
+4. **Test Thoroughly** ✅
    - Empty database scenario
    - Large document sets
    - Special characters in filenames
    - Concurrent sync requests
 
+## Implementation Notes
+
+### Key Design Decisions
+1. **Automerge Integration**: The sync service properly fetches content from Automerge documents when available, falling back to SQLite content for unedited documents.
+
+2. **File Naming**: Using `{id}-{filename}` format ensures stable file paths and prevents naming conflicts.
+
+3. **Content Comparison**: The service reads existing file content to detect actual changes, avoiding unnecessary commits.
+
+4. **Environment Paths**: 
+   - Development: `apps/api/git-repo/`
+   - Production: `/data/git-repo/` (Fly.io persistent volume)
+
+### Files Created
+- `src/services/git-sync.ts` - Git synchronization service
+- `src/routes/git.ts` - API endpoint handler
+
+### Architecture Integration
+The git sync integrates seamlessly with the existing Automerge-based architecture:
+- Respects Automerge as the source of truth for edited documents
+- Uses the same `DocumentService` pattern as other endpoints
+- Maintains consistency with the dual-storage approach
+
 ## Conclusion
 
-This plan provides a simple, effective approach to synchronizing TnyOffice documents with a git repository. The design is extensible for future remote repository support while keeping the initial implementation focused and achievable.
+The git integration has been successfully implemented, providing a simple yet effective way to export all TnyOffice documents to a git repository. The implementation is production-ready for the prototype phase and easily extensible for future features like remote repository push/pull.
