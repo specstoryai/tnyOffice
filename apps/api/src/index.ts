@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { log } from './utils/logger.js';
 import { initDB } from './db/database.js';
+import { initAutomergeRepo } from './automerge/repo.js';
 import filesRouter from './routes/files.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +27,8 @@ app.use('/api/v1/files', filesRouter);
 async function start(): Promise<void> {
   try {
     await initDB();
+    initAutomergeRepo();
+    
     app.listen(PORT, () => {
       log.info(`API server running on http://localhost:${PORT}`);
     });

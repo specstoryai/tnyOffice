@@ -23,8 +23,18 @@ export async function initDB(): Promise<Database.Database> {
       id TEXT PRIMARY KEY,
       filename TEXT NOT NULL,
       content TEXT,
+      automerge_id TEXT UNIQUE,
       created_at INTEGER DEFAULT (unixepoch()),
       updated_at INTEGER DEFAULT (unixepoch())
+    )
+  `);
+
+  // Create Automerge storage table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS automerge_storage (
+      key TEXT PRIMARY KEY,
+      data BLOB NOT NULL,
+      created_at INTEGER DEFAULT (unixepoch())
     )
   `);
 
@@ -32,6 +42,8 @@ export async function initDB(): Promise<Database.Database> {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_files_created_at ON files(created_at);
     CREATE INDEX IF NOT EXISTS idx_files_filename ON files(filename);
+    CREATE INDEX IF NOT EXISTS idx_files_automerge_id ON files(automerge_id);
+    CREATE INDEX IF NOT EXISTS idx_automerge_key_prefix ON automerge_storage(key);
   `);
 
   log.info('Database initialized successfully');
