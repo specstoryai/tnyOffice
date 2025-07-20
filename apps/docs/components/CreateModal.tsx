@@ -98,8 +98,8 @@ export function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="p-6 space-y-4 flex-shrink-0">
             {/* Filename input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -127,11 +127,11 @@ export function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
           </div>
 
           {/* Editor */}
-          <div className="flex-1 px-6 pb-2 min-h-0">
+          <div className="flex-1 px-6 pb-2 min-h-0 overflow-hidden">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Content
             </label>
-            <div className="h-full border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
+            <div className="h-[calc(100%-2rem)] border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
               <Editor
                 value={content}
                 onChange={setContent}
@@ -141,7 +141,7 @@ export function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
