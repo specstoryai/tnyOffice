@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TnyOffice Docs
+
+A simple markdown document viewer and editor that connects to the TnyOffice API service.
+
+## Overview
+
+This Next.js application provides a clean interface for:
+- Creating markdown documents
+- Listing all documents
+- Viewing documents with syntax highlighting using CodeMirror 6
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+1. Make sure the API service is running on port 3001:
+   ```bash
+   cd ../api
+   npm run dev
+   ```
+
+2. Configure the API endpoint (optional):
+   Create or edit `.env.local`:
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:3001
+   ```
+
+### Development
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3002](http://localhost:3002) to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Document List**: Browse all documents in the sidebar
+- **Create Documents**: Click "New Document" to create markdown files
+- **View Documents**: Click any document to view it with syntax highlighting
+- **Auto-refresh**: Document list refreshes every 30 seconds
+- **Responsive Design**: Works on mobile and desktop
 
-## Learn More
+## Technology Stack
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js 15
+- CodeMirror 6 for markdown editing
+- Tailwind CSS for styling
+- TypeScript
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+docs/
+├── app/
+│   └── page.tsx          # Main application page
+├── components/
+│   ├── Layout.tsx        # Main layout with sidebar
+│   ├── DocumentList.tsx  # Document list in sidebar
+│   ├── DocumentViewer.tsx # Document viewer with CodeMirror
+│   ├── CreateModal.tsx   # Modal for creating new documents
+│   └── Editor.tsx        # CodeMirror wrapper component
+└── plans/
+    └── init_docs_plan.md # Implementation plan
+```
