@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for tny-office-api on 2025-07-19T23:01:04-04:00
+# fly.toml app configuration file generated for tny-office-api on 2025-07-20T08:15:43-04:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -7,8 +7,6 @@ app = 'tny-office-api'
 primary_region = 'bos'
 
 [build]
-
-# Remove processes section since we'll use the default CMD from Dockerfile
 
 [[mounts]]
   source = 'data'
@@ -23,29 +21,27 @@ primary_region = 'bos'
   auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  # processes = ['app']  # Not needed when using default process
-  
+
   [http_service.concurrency]
-    type = "connections"
+    type = 'connections'
     hard_limit = 25
     soft_limit = 20
 
-# Enable WebSocket support
 [[services]]
+  protocol = 'tcp'
   internal_port = 3001
-  protocol = "tcp"
-  auto_stop_machines = false
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
   [[services.ports]]
-    handlers = ["http"]
-    port = "80"
+    port = 80
+    handlers = ['http']
     force_https = true
 
   [[services.ports]]
-    handlers = ["tls", "http"]
-    port = "443"
+    port = 443
+    handlers = ['tls', 'http']
 
 [[vm]]
   memory = '1gb'
