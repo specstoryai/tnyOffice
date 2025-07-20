@@ -122,7 +122,7 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
         <Editor value={document.content} readOnly={true} />
       </div>
     </div>

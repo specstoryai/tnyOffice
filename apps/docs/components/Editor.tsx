@@ -17,10 +17,15 @@ export function Editor({ value, onChange, readOnly = false, placeholder }: Edito
     EditorView.theme({
       '&': {
         fontSize: '14px',
+        height: '100%',
+      },
+      '.cm-scroller': {
+        overflow: 'auto',
+        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
       },
       '.cm-content': {
         padding: '16px',
-        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+        minHeight: '100%',
       },
       '.cm-focused .cm-cursor': {
         borderLeftColor: '#3b82f6',
@@ -56,7 +61,7 @@ export function Editor({ value, onChange, readOnly = false, placeholder }: Edito
         highlightSelectionMatches: true,
         searchKeymap: true,
       }}
-      className="h-full"
+      style={{ height: '100%' }}
     />
   );
 }

@@ -126,7 +126,7 @@ export function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
           </div>
 
           {/* Editor */}
-          <div className="flex-1 px-6 pb-2 overflow-hidden">
+          <div className="flex-1 px-6 pb-2 min-h-0">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Content
             </label>
