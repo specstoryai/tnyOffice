@@ -269,6 +269,7 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
               placeholder="Start typing..."
               onAddComment={handleAddComment}
               comments={comments}
+              activeCommentId={activeCommentId}
               editorRef={editorRef}
               onCommentClick={(position: number) => {
                 // Find comment at this position

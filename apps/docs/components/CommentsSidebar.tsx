@@ -24,9 +24,18 @@ export function CommentsSidebar({
 }: CommentsSidebarProps) {
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   
-  // Separate active and orphaned comments
-  const activeComments = comments.filter(c => c.status !== 'orphaned');
-  const orphanedComments = comments.filter(c => c.status === 'orphaned');
+  // Separate active and orphaned comments, then sort by position
+  const activeComments = comments
+    .filter(c => c.status !== 'orphaned')
+    .sort((a, b) => {
+      const aStart = a.resolvedStart ?? a.anchorStart;
+      const bStart = b.resolvedStart ?? b.anchorStart;
+      return aStart - bStart;
+    });
+  
+  const orphanedComments = comments
+    .filter(c => c.status === 'orphaned')
+    .sort((a, b) => a.createdAt - b.createdAt); // Sort orphaned by creation time
 
   const handleDelete = async (commentId: string) => {
     try {

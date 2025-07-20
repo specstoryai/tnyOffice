@@ -8,7 +8,7 @@ import { automergeSyncPlugin } from '@automerge/automerge-codemirror';
 import { useRepo } from '@automerge/automerge-repo-react-hooks';
 import type { MarkdownDocument } from '@/lib/automerge/types';
 import type { AutomergeUrl, DocHandle } from '@automerge/automerge-repo';
-import { commentsField, commentTheme, updateComments } from '@/lib/codemirror/comments-extension';
+import { commentsField, commentDecorations, commentTheme, updateComments, updateActiveComment } from '@/lib/codemirror/comments-extension';
 import { Comment } from '@/lib/types/comment';
 
 export interface CollaborativeEditorProps {
@@ -19,6 +19,7 @@ export interface CollaborativeEditorProps {
   onContentChange?: (content: string) => void;
   onAddComment?: (selection: { from: number; to: number; text: string }) => void;
   comments?: Comment[];
+  activeCommentId?: string | null;
   onCommentClick?: (position: number) => void;
   editorRef?: React.MutableRefObject<EditorView | null>;
 }
@@ -31,6 +32,7 @@ export function CollaborativeEditor({
   onContentChange,
   onAddComment,
   comments = [],
+  activeCommentId,
   onCommentClick,
   editorRef
 }: CollaborativeEditorProps) {
@@ -127,6 +129,13 @@ export function CollaborativeEditor({
     }
   }, [comments]);
 
+  // Update active comment in editor
+  useEffect(() => {
+    if (editorViewRef.current) {
+      updateActiveComment(editorViewRef.current, activeCommentId || null);
+    }
+  }, [activeCommentId]);
+
   // Handle comment keyboard shortcut
   const handleAddComment = useCallback(() => {
     if (!editorViewRef.current || !onAddComment) return false;
@@ -180,6 +189,7 @@ export function CollaborativeEditor({
     markdown(),
     syncPlugin,
     commentsField,
+    commentDecorations,
     commentTheme,
     keymap.of([
       {
