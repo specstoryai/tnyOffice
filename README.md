@@ -63,12 +63,30 @@ Collaborative markdown docs app (like GDocs).
 ### Logger (`packages/logger`)
 A simple, environment-aware logging utility that provides consistent logging across all apps.
 
+**Log Levels:**
+- `log.info()` - General information messages (hidden in production)
+- `log.debug()` - Detailed debugging information (hidden in production)
+- `log.warn()` - Warning messages (hidden in production)
+- `log.error()` - Error messages (always visible, even in production)
+
+**Environment-based Behavior:**
+The logger automatically adjusts its output based on the `NODE_ENV` environment variable:
+- **Development** (`NODE_ENV !== 'production'`): All log levels are visible
+- **Production** (`NODE_ENV === 'production'`): Only `error` logs are visible
+
 Usage:
 ```typescript
 import { log } from '@tnyoffice/logger';
 
-log.info('Fetching user data', userId);
-log.error('Failed to fetch', error);
+log.info('Fetching user data', userId);      // Visible in dev, hidden in prod
+log.debug('Request payload:', data);         // Visible in dev, hidden in prod
+log.warn('API rate limit approaching');      // Visible in dev, hidden in prod
+log.error('Failed to fetch', error);         // Always visible
+```
+
+To run in production mode locally:
+```bash
+NODE_ENV=production npm run start
 ```
 
 ## Workspace Management
