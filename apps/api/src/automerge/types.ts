@@ -8,6 +8,14 @@ export interface Comment {
   createdAt: number;
   anchorStart: number;  // character offset in document
   anchorEnd: number;    // character offset in document
+  
+  // Cursor-based anchoring (NEW)
+  startCursor?: string;  // Automerge cursor that moves with edits
+  endCursor?: string;    // Automerge cursor that moves with edits
+  
+  // Metadata for orphaned comments
+  originalText?: string; // Store the originally selected text
+  status?: 'active' | 'orphaned';
 }
 
 // Define the structure of our Automerge document

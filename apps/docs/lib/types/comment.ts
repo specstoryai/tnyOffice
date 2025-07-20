@@ -5,6 +5,18 @@ export interface Comment {
   createdAt: number;
   anchorStart: number;
   anchorEnd: number;
+  
+  // Cursor-based anchoring
+  startCursor?: string;
+  endCursor?: string;
+  
+  // Resolved positions (from API)
+  resolvedStart?: number;
+  resolvedEnd?: number;
+  
+  // Metadata
+  originalText?: string;
+  status?: 'active' | 'orphaned';
 }
 
 export interface CreateCommentInput {

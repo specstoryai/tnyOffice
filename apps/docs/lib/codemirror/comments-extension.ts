@@ -28,15 +28,28 @@ export const commentsField = StateField.define<DecorationSet>({
         const builder = new RangeSetBuilder<Decoration>();
         
         // Sort comments by start position to build decorations properly
-        const sortedComments = [...effect.value].sort((a, b) => a.anchorStart - b.anchorStart);
+        const sortedComments = [...effect.value].sort((a, b) => {
+          const aStart = a.resolvedStart ?? a.anchorStart;
+          const bStart = b.resolvedStart ?? b.anchorStart;
+          return aStart - bStart;
+        });
         
         for (const comment of sortedComments) {
-          // Ensure positions are within document bounds
-          const start = Math.max(0, Math.min(comment.anchorStart, tr.newDoc.length));
-          const end = Math.max(start, Math.min(comment.anchorEnd, tr.newDoc.length));
+          // Skip orphaned comments
+          if (comment.status === 'orphaned') {
+            continue;
+          }
           
-          if (start < end) {
-            builder.add(start, end, commentMark);
+          // Use resolved positions if available, otherwise fall back to original positions
+          const start = comment.resolvedStart ?? comment.anchorStart;
+          const end = comment.resolvedEnd ?? comment.anchorEnd;
+          
+          // Ensure positions are within document bounds
+          const boundedStart = Math.max(0, Math.min(start, tr.newDoc.length));
+          const boundedEnd = Math.max(boundedStart, Math.min(end, tr.newDoc.length));
+          
+          if (boundedStart < boundedEnd) {
+            builder.add(boundedStart, boundedEnd, commentMark);
           }
         }
         

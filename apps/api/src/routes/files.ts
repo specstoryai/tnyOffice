@@ -1,5 +1,6 @@
 import express, { Request, Response, Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import * as Automerge from '@automerge/automerge';
 import { log } from '../utils/logger.js';
 import { getDB } from '../db/database.js';
 import { DocumentService } from '../automerge/document-service.js';
@@ -322,16 +323,38 @@ router.post('/:id/comments', async (req: Request<{ id: string }, object, CreateC
       anchorEnd: validatedData.anchorEnd
     };
     
-    // Add comment to document
+    // Add comment to document with cursors
     handle.change((doc) => {
       if (!doc.comments) {
         doc.comments = {};
       }
-      doc.comments[comment.id] = comment;
+      
+      // Create cursors that will move with text edits
+      const startCursor = Automerge.getCursor(doc, ['content'], validatedData.anchorStart, 'after');
+      const endCursor = Automerge.getCursor(doc, ['content'], validatedData.anchorEnd, 'before');
+      
+      // Extract the original text for reference
+      const originalText = doc.content.substring(validatedData.anchorStart, validatedData.anchorEnd);
+      
+      // Add cursor information to comment
+      const commentWithCursors: Comment = {
+        ...comment,
+        startCursor,
+        endCursor,
+        originalText,
+        status: 'active'
+      };
+      
+      doc.comments[comment.id] = commentWithCursors;
     });
     
+    // Get the comment with cursors from the document
+    await handle.doc(); // Ensure document is loaded
+    const updatedDoc = handle.docSync();
+    const savedComment = updatedDoc?.comments?.[comment.id];
+    
     log.info(`POST /api/v1/files/[id]/comments - Created comment ${comment.id} on file ${id}`);
-    return res.status(201).json(comment);
+    return res.status(201).json(savedComment || comment);
     
   } catch (error) {
     if (error instanceof ZodError) {
@@ -378,10 +401,44 @@ router.get('/:id/comments', async (req: Request<{ id: string }>, res: Response<C
       return res.json([]);
     }
     
-    const comments = Object.values(doc.comments);
+    // Resolve cursor positions for each comment
+    const commentsWithResolvedPositions = Object.values(doc.comments).map(comment => {
+      let resolvedStart = comment.anchorStart;
+      let resolvedEnd = comment.anchorEnd;
+      let status = comment.status || 'active';
+      
+      // Try to resolve cursor positions if they exist
+      if (comment.startCursor && comment.endCursor) {
+        try {
+          const startPos = Automerge.getCursorPosition(doc, ['content'], comment.startCursor);
+          const endPos = Automerge.getCursorPosition(doc, ['content'], comment.endCursor);
+          
+          if (startPos !== undefined && endPos !== undefined) {
+            resolvedStart = startPos;
+            resolvedEnd = endPos;
+            
+            // Check if the comment is orphaned (cursors at same position)
+            if (startPos === endPos) {
+              status = 'orphaned';
+            }
+          }
+        } catch (err) {
+          // Cursor resolution failed, mark as orphaned
+          log.warn(`Failed to resolve cursors for comment ${comment.id}:`, err);
+          status = 'orphaned';
+        }
+      }
+      
+      return {
+        ...comment,
+        resolvedStart,
+        resolvedEnd,
+        status
+      };
+    });
     
-    log.info(`GET /api/v1/files/[id]/comments - Found ${comments.length} comments for file ${id}`);
-    return res.json(comments);
+    log.info(`GET /api/v1/files/[id]/comments - Found ${commentsWithResolvedPositions.length} comments for file ${id}`);
+    return res.json(commentsWithResolvedPositions);
     
   } catch (error) {
     log.error('Error getting comments:', error);
