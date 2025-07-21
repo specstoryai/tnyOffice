@@ -76,6 +76,11 @@ npm run start
   - Optional body parameters:
     - `remoteUrl` (string): Override the default remote repository URL
     - `commitMessage` (string): Custom commit message instead of default timestamp
+- `POST /api/v1/git/pull` - Pull changes from git repository and merge into documents
+  - Optional body parameters:
+    - `remoteUrl` (string): Override the default remote repository URL
+    - `branch` (string): Branch to pull from (default: "main")
+    - `preview` (boolean): If true, preview changes without applying them (default: false)
 
 ### WebSocket Endpoints
 
@@ -130,6 +135,44 @@ curl -X PUT http://localhost:3001/api/v1/files/{id} \
 
 # Sync documents to git
 curl -X POST http://localhost:3001/api/v1/git/sync
+
+# Pull changes from git (preview mode - shows what would change)
+curl -X POST http://localhost:3001/api/v1/git/pull \
+  -H "Content-Type: application/json" \
+  -d '{
+    "preview": true
+  }'
+
+# Response (preview mode):
+{
+  "success": true,
+  "changes": [
+    {
+      "fileId": "abc-123",
+      "filename": "design-spec.md",
+      "status": "modified",
+      "additions": 45,
+      "deletions": 12,
+      "operations": [...]
+    }
+  ],
+  "applied": false
+}
+
+# Pull and apply changes from git (default behavior)
+curl -X POST http://localhost:3001/api/v1/git/pull \
+  -H "Content-Type: application/json" \
+  -d '{
+    "branch": "main"
+  }'
+
+# Response (applied):
+{
+  "success": true,
+  "changes": [...],
+  "applied": true,
+  "appliedAt": "2025-01-20T10:30:00Z"
+}
 
 # Create a comment
 curl -X POST http://localhost:3001/api/v1/files/{id}/comments \

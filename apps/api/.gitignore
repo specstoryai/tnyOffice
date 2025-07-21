@@ -8,3 +8,4 @@ database.db-wal
 dist
 *.tsbuildinfo
 git-repo/
+test-git-pull-curl.sh

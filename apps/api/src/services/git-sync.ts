@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { log } from '../utils/logger.js';
 import { getDB } from '../db/database.js';
 import { DocumentService } from '../automerge/document-service.js';
+import { GitDiffService, FileDiff, ChangePreview } from './git-diff.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,20 @@ export interface GitSyncResult {
 export interface GitSyncOptions {
   remoteUrl?: string;
   commitMessage?: string;
+}
+
+export interface GitPullOptions {
+  remoteUrl?: string;
+  branch?: string;
+  preview?: boolean;
+}
+
+export interface GitPullResult {
+  success: boolean;
+  changes: ChangePreview[];
+  applied?: boolean;
+  appliedAt?: string;
+  error?: string;
 }
 
 export class GitSyncService {
@@ -326,6 +341,200 @@ export class GitSyncService {
       });
       // Don't throw - push failure shouldn't fail the sync
       return { pushed: false, remoteUrl: remoteUrl.replace(/:[^@]+@/, ':***@') };
+    }
+  }
+
+  async pullFromRemote(options: GitPullOptions = {}): Promise<GitPullResult> {
+    const result: GitPullResult = {
+      success: false,
+      changes: [],
+      applied: false
+    };
+
+    try {
+      // Ensure repo is initialized
+      await this.initializeRepo(options.remoteUrl);
+
+      const remoteUrl = options.remoteUrl || process.env.GIT_REMOTE_URL;
+      if (!remoteUrl) {
+        throw new Error('No remote URL configured for pull operation');
+      }
+
+      const branch = options.branch || 'main';
+      const isPreview = options.preview || false;
+      
+      log.info(`Starting git pull from ${branch} branch`, { preview: isPreview });
+
+      // Fetch latest changes from remote
+      try {
+        await this.git.fetch('origin', branch);
+        log.info('Fetched latest changes from remote');
+      } catch (fetchError) {
+        log.error('Failed to fetch from remote:', fetchError);
+        throw new Error('Failed to fetch from remote repository');
+      }
+
+      // Get list of changed files
+      const changedFiles = await this.getChangedFiles(branch);
+      log.info(`Found ${changedFiles.length} changed files`);
+
+      // Process each changed file
+      for (const fileDiff of changedFiles) {
+        const preview = GitDiffService.previewChanges(fileDiff);
+        result.changes.push(preview);
+
+        // Apply changes if not in preview mode
+        if (!isPreview) {
+          await this.applyFileChanges(fileDiff);
+        }
+      }
+
+      // If not preview mode, merge the remote branch
+      if (!isPreview) {
+        try {
+          await this.git.merge([`origin/${branch}`]);
+          log.info('Successfully merged remote changes');
+        } catch (mergeError) {
+          log.error('Merge failed:', mergeError);
+          // Continue - we've already applied the changes to Automerge
+        }
+        result.applied = true;
+        result.appliedAt = new Date().toISOString();
+      }
+
+      result.success = true;
+      log.info('Git pull completed successfully', { 
+        preview: isPreview, 
+        changesCount: result.changes.length,
+        applied: result.applied 
+      });
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error('Git pull failed:', error);
+      result.error = errorMessage;
+    }
+
+    return result;
+  }
+
+  private async getChangedFiles(branch: string): Promise<FileDiff[]> {
+    const changedFiles: FileDiff[] = [];
+
+    // Get diff between current HEAD and remote branch
+    const diffSummary = await this.git.diffSummary([`HEAD..origin/${branch}`]);
+    
+    for (const file of diffSummary.files) {
+      if (!file.file.startsWith('documents/')) continue;
+
+      const filename = path.basename(file.file);
+      const fileIdMatch = filename.match(/^([a-f0-9-]+)-(.+)$/);
+      if (!fileIdMatch) continue;
+
+      const [, fileId, originalFilename] = fileIdMatch;
+
+      try {
+        // Get git content
+        let gitContent = '';
+        let status: 'added' | 'modified' | 'deleted' = 'modified';
+
+        // Check if file is text file (not binary)
+        if ('deletions' in file && 'insertions' in file) {
+          if (file.deletions === 0 && file.insertions > 0) {
+            status = 'added';
+            gitContent = await this.git.show([`origin/${branch}:${file.file}`]);
+          } else if (file.insertions === 0 && file.deletions > 0) {
+            status = 'deleted';
+          } else {
+            gitContent = await this.git.show([`origin/${branch}:${file.file}`]);
+          }
+        } else {
+          // Binary file - skip
+          log.warn(`Skipping binary file: ${file.file}`);
+          continue;
+        }
+
+        // Get current content from Automerge
+        let currentContent = '';
+        try {
+          const handle = await DocumentService.getOrCreateDocument(fileId);
+          currentContent = await DocumentService.getDocumentContent(handle);
+        } catch (err) {
+          log.warn(`Could not get Automerge content for ${fileId}, using empty content`);
+        }
+
+        changedFiles.push({
+          fileId,
+          filename: originalFilename,
+          gitContent,
+          currentContent,
+          status
+        });
+      } catch (err) {
+        log.error(`Failed to process file ${file.file}:`, err);
+      }
+    }
+
+    return changedFiles;
+  }
+
+  private async applyFileChanges(fileDiff: FileDiff): Promise<void> {
+    const db = getDB();
+
+    switch (fileDiff.status) {
+      case 'added':
+        // Create new document
+        try {
+          // Insert into database
+          db.prepare(`
+            INSERT INTO files (id, filename, content, created_at, updated_at)
+            VALUES (?, ?, ?, unixepoch(), unixepoch())
+          `).run(fileDiff.fileId, fileDiff.filename, fileDiff.gitContent);
+
+          // Create Automerge document
+          const handle = await DocumentService.getOrCreateDocument(fileDiff.fileId);
+          await handle.change((doc) => {
+            doc.content = fileDiff.gitContent;
+          });
+
+          log.info(`Created new document ${fileDiff.fileId} from git`);
+        } catch (err) {
+          log.error(`Failed to create document ${fileDiff.fileId}:`, err);
+        }
+        break;
+
+      case 'modified':
+        // Apply diff to existing document
+        try {
+          const handle = await DocumentService.getOrCreateDocument(fileDiff.fileId);
+          const operations = GitDiffService.calculateDiff(fileDiff.gitContent, fileDiff.currentContent);
+          await GitDiffService.applyDiffToDocument(handle, operations);
+          
+          // Update SQLite cache
+          db.prepare(`
+            UPDATE files SET content = ?, updated_at = unixepoch()
+            WHERE id = ?
+          `).run(fileDiff.gitContent, fileDiff.fileId);
+
+          log.info(`Updated document ${fileDiff.fileId} with git changes`);
+        } catch (err) {
+          log.error(`Failed to update document ${fileDiff.fileId}:`, err);
+        }
+        break;
+
+      case 'deleted':
+        // Mark as deleted but don't remove if actively being edited
+        try {
+          // Check if document exists and is being edited
+          const doc = db.prepare('SELECT * FROM files WHERE id = ?').get(fileDiff.fileId) as any;
+          if (doc) {
+            // Just mark as deleted in metadata, don't actually delete
+            log.info(`Document ${fileDiff.fileId} deleted in git but preserved in database`);
+          }
+        } catch (err) {
+          log.error(`Failed to process deletion of ${fileDiff.fileId}:`, err);
+        }
+        break;
     }
   }
 
