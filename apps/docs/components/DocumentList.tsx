@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { log } from '@tnyoffice/logger';
-import { GitBranch } from 'lucide-react';
+import { GitBranch, Trash2 } from 'lucide-react';
 import { GitSyncModal } from './GitSyncModal';
 import { syncToGit } from '../lib/git-sync';
-import { apiGet } from '../lib/api/client';
+import { apiGet, apiDelete } from '../lib/api/client';
 
 interface FileMetadata {
   id: string;
@@ -29,6 +29,7 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [showGitSync, setShowGitSync] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const limit = 20;
 
   const fetchDocuments = useCallback(async (reset = false) => {
@@ -97,6 +98,32 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
     log.info('Git sync successful:', result);
   };
 
+  const handleDelete = async (id: string, filename: string) => {
+    if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+      await apiDelete(`/api/v1/files/${id}`);
+      
+      // Remove from local state
+      setDocuments(prev => prev.filter(doc => doc.id !== id));
+      
+      // If this was the selected document, clear selection
+      if (selectedId === id) {
+        onSelect('');
+      }
+      
+      log.info('Document deleted successfully:', id);
+    } catch (err) {
+      log.error('Error deleting document:', err);
+      alert('Failed to delete document');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -127,20 +154,35 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
         ) : (
           <>
             {documents.map((doc) => (
-              <button
+              <div
                 key={doc.id}
-                onClick={() => onSelect(doc.id)}
-                className={`w-full text-left p-4 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                className={`w-full flex items-center border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                   selectedId === doc.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                 }`}
               >
-                <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                  {doc.filename}
-                </div>
-                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {formatDate(doc.createdAt)} • {formatSize(doc.size)}
-                </div>
-              </button>
+                <button
+                  onClick={() => onSelect(doc.id)}
+                  className="flex-1 text-left p-4"
+                >
+                  <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                    {doc.filename}
+                  </div>
+                  <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {formatDate(doc.createdAt)} • {formatSize(doc.size)}
+                  </div>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(doc.id, doc.filename);
+                  }}
+                  disabled={deletingId === doc.id}
+                  className="p-2 mr-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Delete document"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
             ))}
             
             {hasMore && (
