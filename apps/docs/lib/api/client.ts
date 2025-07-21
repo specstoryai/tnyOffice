@@ -22,9 +22,9 @@ export async function apiClient(
   const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
 
   // Build headers
-  const requestHeaders: HeadersInit = {
+  const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...headers,
+    ...(headers as Record<string, string>),
   };
 
   // Add API key if available and not skipped
@@ -49,7 +49,7 @@ export async function apiClient(
 /**
  * Make an authenticated GET request
  */
-export async function apiGet<T = any>(endpoint: string): Promise<T> {
+export async function apiGet<T>(endpoint: string): Promise<T> {
   const response = await apiClient(endpoint, { method: 'GET' });
   
   if (!response.ok) {
@@ -62,7 +62,7 @@ export async function apiGet<T = any>(endpoint: string): Promise<T> {
 /**
  * Make an authenticated POST request
  */
-export async function apiPost<T = any>(endpoint: string, data?: any): Promise<T> {
+export async function apiPost<T>(endpoint: string, data?: unknown): Promise<T> {
   const response = await apiClient(endpoint, {
     method: 'POST',
     body: data ? JSON.stringify(data) : undefined,
@@ -78,7 +78,7 @@ export async function apiPost<T = any>(endpoint: string, data?: any): Promise<T>
 /**
  * Make an authenticated PUT request
  */
-export async function apiPut<T = any>(endpoint: string, data?: any): Promise<T> {
+export async function apiPut<T>(endpoint: string, data?: unknown): Promise<T> {
   const response = await apiClient(endpoint, {
     method: 'PUT',
     body: data ? JSON.stringify(data) : undefined,
@@ -94,7 +94,7 @@ export async function apiPut<T = any>(endpoint: string, data?: any): Promise<T> 
 /**
  * Make an authenticated DELETE request
  */
-export async function apiDelete<T = any>(endpoint: string): Promise<T> {
+export async function apiDelete<T>(endpoint: string): Promise<T> {
   const response = await apiClient(endpoint, { method: 'DELETE' });
   
   if (!response.ok) {

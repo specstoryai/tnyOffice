@@ -63,8 +63,8 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
         try {
           data = await apiGet<FileWithContent>(`/api/v1/files/${documentId}`);
           setDocument(data);
-        } catch (err: any) {
-          if (err.message.includes('404')) {
+        } catch (err) {
+          if (err instanceof Error && err.message.includes('404')) {
             throw new Error('Document not found');
           }
           throw new Error('Failed to fetch document');
@@ -76,7 +76,7 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
           try {
             const automergeData = await apiGet<AutomergeUrlResponse>(`/api/v1/files/${documentId}/automerge`);
             setAutomergeUrl(automergeData.automergeUrl);
-          } catch (err) {
+          } catch (_err) {
             // If no Automerge document exists, create one by updating the document
             await apiPut(`/api/v1/files/${documentId}`, {
               content: data.content,
