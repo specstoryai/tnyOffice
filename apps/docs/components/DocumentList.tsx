@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { log } from '@tnyoffice/logger';
-import { GitBranch, Trash2 } from 'lucide-react';
+import { Trash2, Download, Upload } from 'lucide-react';
 import { GitSyncModal } from './GitSyncModal';
-import { syncToGit } from '../lib/git-sync';
+import { GitPullModal } from './GitPullModal';
+import { syncToGit, pullFromGit } from '../lib/git-sync';
 import { apiGet, apiDelete } from '../lib/api/client';
 
 interface FileMetadata {
@@ -29,6 +30,7 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [showGitSync, setShowGitSync] = useState(false);
+  const [showGitPull, setShowGitPull] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const limit = 20;
 
@@ -98,6 +100,23 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
     log.info('Git sync successful:', result);
   };
 
+  const handleGitPull = async (remoteUrl?: string, branch?: string, preview?: boolean) => {
+    const result = await pullFromGit(remoteUrl, branch, preview);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Pull failed');
+    }
+    
+    log.info('Git pull successful:', result);
+    
+    // Refresh document list if changes were applied
+    if (result.applied) {
+      await fetchDocuments(true);
+    }
+    
+    return result;
+  };
+
   const handleDelete = async (id: string, filename: string) => {
     if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
       return;
@@ -134,13 +153,22 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
         >
           New Document
         </button>
-        <button
-          onClick={() => setShowGitSync(true)}
-          className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
-        >
-          <GitBranch size={18} />
-          Sync to Git
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowGitSync(true)}
+            className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <Upload size={18} />
+            Git Push
+          </button>
+          <button
+            onClick={() => setShowGitPull(true)}
+            className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <Download size={18} />
+            Git Pull
+          </button>
+        </div>
       </div>
 
       {/* Document list */}
@@ -203,6 +231,13 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
         isOpen={showGitSync}
         onClose={() => setShowGitSync(false)}
         onSync={handleGitSync}
+      />
+
+      {/* Git Pull Modal */}
+      <GitPullModal
+        isOpen={showGitPull}
+        onClose={() => setShowGitPull(false)}
+        onPull={handleGitPull}
       />
     </div>
   );
