@@ -278,6 +278,7 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
               onAddComment={handleAddComment}
               comments={comments}
               activeCommentId={activeCommentId}
+              showComments={showCommentsSidebar}
               editorRef={editorRef}
               onCommentClick={(position: number) => {
                 // Find comment at this position

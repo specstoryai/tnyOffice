@@ -20,6 +20,7 @@ export interface CollaborativeEditorProps {
   onAddComment?: (selection: { from: number; to: number; text: string }) => void;
   comments?: Comment[];
   activeCommentId?: string | null;
+  showComments?: boolean;
   onCommentClick?: (position: number) => void;
   editorRef?: React.MutableRefObject<EditorView | null>;
 }
@@ -33,6 +34,7 @@ export function CollaborativeEditor({
   onAddComment,
   comments = [],
   activeCommentId,
+  showComments = true,
   onCommentClick,
   editorRef
 }: CollaborativeEditorProps) {
@@ -122,12 +124,13 @@ export function CollaborativeEditor({
     };
   }, [handle, isReady, onContentChange]);
 
-  // Update comments in editor when they change
+  // Update comments in editor when they change or visibility changes
   useEffect(() => {
-    if (editorViewRef.current && comments) {
-      updateComments(editorViewRef.current, comments);
+    if (editorViewRef.current) {
+      // Pass empty array if comments should be hidden
+      updateComments(editorViewRef.current, showComments ? comments : []);
     }
-  }, [comments]);
+  }, [comments, showComments]);
 
   // Update active comment in editor
   useEffect(() => {
