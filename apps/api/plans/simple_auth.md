@@ -1,5 +1,10 @@
 # Simple Authentication Plan for TnyOffice API
 
+⚠️ **SECURITY WARNING**: This is a VERY BASIC authentication approach suitable only for prototypes. The API key is exposed in the browser's JavaScript bundle, making it visible to anyone who inspects the code. We are only accepting this security risk because:
+1. The Vercel deployment has password protection enabled
+2. This is a prototype, not a production application
+3. The simplicity outweighs the security concerns for our current needs
+
 ## Overview
 
 This plan outlines a simple, single-API-key authentication approach to secure all API endpoints (REST and WebSocket) for the TnyOffice prototype. Since the frontend is already protected by Vercel authentication, we only need to secure the communication between the Next.js app and the Node.js API.
@@ -15,14 +20,20 @@ This plan outlines a simple, single-API-key authentication approach to secure al
 
 ## Authentication Strategy
 
-### 1. API Key Authentication
+### 1. Pre-shared API Key Authentication
 
 **Approach**: Use a single, shared API key that the frontend includes in all requests to the backend.
+
+**Major Security Limitation**: 
+- The API key is exposed in the browser via `NEXT_PUBLIC_API_KEY`
+- Anyone can view the key by inspecting the JavaScript source
+- This is NOT secure for public-facing applications
+- We rely entirely on Vercel's deployment password protection
 
 **Implementation**:
 - Generate a secure API key (32+ character random string)
 - Store the API key as an environment variable on both frontend and backend
-- Frontend includes the key in all requests
+- Frontend includes the key in all requests (visible in browser!)
 - Backend validates the key before processing any request
 
 ### 2. Environment Variables
@@ -189,20 +200,34 @@ If issues arise:
 
 ## Security Considerations
 
-1. **API Key Storage**:
-   - Never commit keys to repository
-   - Use environment variables only
-   - Rotate keys periodically
+⚠️ **CRITICAL SECURITY LIMITATIONS**:
+1. **API Key is PUBLIC**: Anyone who can access the frontend can see the API key
+2. **No Real Security**: This only prevents casual automated attacks
+3. **Vercel Password is the ONLY Protection**: Without Vercel's deployment password, anyone could use the API
 
-2. **HTTPS Only**:
-   - Fly.io forces HTTPS (already configured)
-   - Vercel uses HTTPS by default
-   - Ensures API key is encrypted in transit
+### Why This is Acceptable (For Now):
+- Vercel deployment password protects the frontend
+- This is a prototype with limited exposure
+- The data is not highly sensitive
+- Time-to-implement trumps security for this phase
 
-3. **Key Rotation**:
-   - Plan for key rotation without downtime
-   - Update both services simultaneously
-   - Consider supporting multiple valid keys temporarily
+### What This Prevents:
+- Random bots hitting the API
+- Accidental exposure if API URL leaks
+- Casual unauthorized access
+
+### What This DOESN'T Prevent:
+- Anyone with frontend access using the API
+- API key extraction from browser
+- Replay attacks
+- Any serious security threat
+
+### Future Improvements Needed:
+1. Move to server-side API calls (API key stays on server)
+2. Implement proper user authentication
+3. Use short-lived JWT tokens
+4. Add rate limiting per user
+5. Implement proper session management
 
 ## Next Steps
 
@@ -221,4 +246,12 @@ After implementing this basic authentication:
 
 ## Conclusion
 
-This simple API key approach provides adequate security for a prototype with real data while keeping implementation complexity minimal. It secures all communication between the protected frontend and the API without requiring a full user authentication system.
+This pre-shared API key approach is a **TEMPORARY SOLUTION** that provides minimal security suitable only for a password-protected prototype. 
+
+**Remember**:
+- The API key is visible to anyone who can access the frontend
+- Vercel's deployment password is the ONLY real security
+- This is NOT suitable for production use
+- This is a conscious trade-off of security for simplicity
+
+The approach prevents casual unauthorized access and is acceptable ONLY because the frontend itself is password-protected via Vercel's deployment settings.

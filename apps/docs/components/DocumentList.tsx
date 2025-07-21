@@ -5,6 +5,7 @@ import { log } from '@tnyoffice/logger';
 import { GitBranch } from 'lucide-react';
 import { GitSyncModal } from './GitSyncModal';
 import { syncToGit } from '../lib/git-sync';
+import { apiGet } from '../lib/api/client';
 
 interface FileMetadata {
   id: string;
@@ -20,8 +21,6 @@ interface DocumentListProps {
   refreshTrigger?: number;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-log.info('DocumentList - API_BASE:', API_BASE);
 
 export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger }: DocumentListProps) {
   const [documents, setDocuments] = useState<FileMetadata[]>([]);
@@ -38,19 +37,10 @@ export function DocumentList({ selectedId, onSelect, onCreateNew, refreshTrigger
       setError(null);
       const currentOffset = reset ? 0 : offset;
       
-      const url = `${API_BASE}/api/v1/files?limit=${limit}&offset=${currentOffset}`;
-      log.debug('Fetching documents from:', url);
+      const endpoint = `/api/v1/files?limit=${limit}&offset=${currentOffset}`;
+      log.debug('Fetching documents from:', endpoint);
       
-      const response = await fetch(url);
-      log.debug('Response status:', response.status, response.statusText);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        log.error('Response error:', errorText);
-        throw new Error(`Failed to fetch documents: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+      const data = await apiGet<{ files: FileMetadata[]; total: number }>(endpoint);
       log.info('Documents fetched:', data);
       
       if (reset) {

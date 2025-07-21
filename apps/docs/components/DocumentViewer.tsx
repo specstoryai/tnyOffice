@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { CollaborativeEditor } from './ClientOnlyCollaborativeEditor';
 import type { AutomergeUrlResponse } from '@/lib/automerge/types';
+import { apiGet, apiPut } from '../lib/api/client';
 
 interface DocumentViewerProps {
   documentId: string | null;
@@ -17,7 +18,6 @@ interface FileWithContent {
   size: number;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export function DocumentViewer({ documentId }: DocumentViewerProps) {
   const [document, setDocument] = useState<FileWithContent | null>(null);
@@ -37,43 +37,32 @@ export function DocumentViewer({ documentId }: DocumentViewerProps) {
         setLoading(true);
         setError(null);
         
-        const response = await fetch(`${API_BASE}/api/v1/files/${documentId}`);
-        
-        if (response.status === 404) {
-          throw new Error('Document not found');
-        }
-        
-        if (!response.ok) {
+        let data: FileWithContent;
+        try {
+          data = await apiGet<FileWithContent>(`/api/v1/files/${documentId}`);
+          setDocument(data);
+        } catch (err: any) {
+          if (err.message.includes('404')) {
+            throw new Error('Document not found');
+          }
           throw new Error('Failed to fetch document');
         }
-        
-        const data = await response.json();
-        setDocument(data);
         
         // Create Automerge document if it doesn't exist yet
         try {
           // First try to get existing Automerge URL
-          let automergeResponse = await fetch(`${API_BASE}/api/v1/files/${documentId}/automerge`);
-          
-          if (!automergeResponse.ok || !automergeResponse.headers.get('content-type')?.includes('application/json')) {
+          try {
+            const automergeData = await apiGet<AutomergeUrlResponse>(`/api/v1/files/${documentId}/automerge`);
+            setAutomergeUrl(automergeData.automergeUrl);
+          } catch (err) {
             // If no Automerge document exists, create one by updating the document
-            await fetch(`${API_BASE}/api/v1/files/${documentId}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                content: data.content,
-              }),
+            await apiPut(`/api/v1/files/${documentId}`, {
+              content: data.content,
             });
             
             // Now fetch the Automerge URL
-            automergeResponse = await fetch(`${API_BASE}/api/v1/files/${documentId}/automerge`);
-          }
-          
-          if (automergeResponse.ok) {
-            const { automergeUrl } = await automergeResponse.json() as AutomergeUrlResponse;
-            setAutomergeUrl(automergeUrl);
+            const automergeData = await apiGet<AutomergeUrlResponse>(`/api/v1/files/${documentId}/automerge`);
+            setAutomergeUrl(automergeData.automergeUrl);
           }
         } catch (err) {
           console.error('Failed to get/create Automerge document:', err);

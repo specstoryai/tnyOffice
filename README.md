@@ -60,12 +60,121 @@ Next.js collaborative markdown editor (like Google Docs) with real-time sync. Fe
 - **WebSocket connection** to API for instant updates
 - **Document list** with create/edit capabilities
 - **Markdown preview** with side-by-side editing
+- **API authentication** for secure communication
 
-**Environment Variables:**
+## Authentication
+
+The API and frontend use a simple API key authentication system to secure all endpoints.
+
+### Development Setup
+
+#### 1. API Service (`apps/api`)
 ```bash
-# .env.local
+# Copy the example file
+cp .env.example .env.local
+
+# For development, you can leave API_KEY empty to disable authentication
+# Or set a test key if you want to test authentication:
+# API_KEY=dev-api-key-for-testing
+```
+
+#### 2. Documents App (`apps/docs`)
+```bash
+# Copy the example file
+cp .env.example .env.local
+
+# The defaults are already set for local development
+# If you enabled authentication in the API, add the same key:
+# NEXT_PUBLIC_API_KEY=dev-api-key-for-testing
+```
+
+**Note**: In development, authentication is optional. If no API_KEY is set, the API will accept all requests.
+
+**Environment Behavior**: 
+- Development (`npm run dev`): NODE_ENV is not set, which enables development features (verbose logging, local file paths, relaxed CORS)
+- Production (Fly.io): NODE_ENV is automatically set to "production" by the Dockerfile, enabling production features (minimal logging, persistent storage paths, strict CORS)
+
+### CORS Configuration for Development
+
+#### Local Docs → Local API (Default)
+No CORS configuration needed. The API allows all origins in development mode by default.
+
+#### Local Docs → Production API (Fly.io)
+If you want to connect your local docs app to the production API on Fly.io:
+
+1. **Update your local docs environment** (`apps/docs/.env.local`):
+```bash
+NEXT_PUBLIC_API_KEY=your-production-api-key
 NEXT_PUBLIC_API_URL=https://tny-office-api.fly.dev
-NEXT_PUBLIC_WS_URL=wss://tny-office-api.fly.dev/automerge-sync
+NEXT_PUBLIC_WS_URL=wss://tny-office-api.fly.dev
+```
+
+2. **Add localhost to allowed origins on Fly.io**:
+```bash
+cd apps/api
+fly secrets set ALLOWED_ORIGINS="https://your-app.vercel.app,http://localhost:3002"
+```
+
+**Security Note**: Remember to remove `http://localhost:3002` from `ALLOWED_ORIGINS` when you're done testing to maintain security.
+
+⚠️ **SECURITY WARNING**: This is a VERY BASIC authentication approach suitable only for prototypes. The API key is exposed in the browser's JavaScript bundle, making it visible to anyone who inspects the code. We are only accepting this security risk because:
+   1. The Vercel deployment has password protection enabled
+   2. This is a prototype, not a production application
+   3. The simplicity outweighs the security concerns for our current needs
+
+### Production Setup
+
+#### 1. Generate a Secure API Key
+```bash
+# Generate a 32-character secure key
+openssl rand -hex 32
+```
+
+#### 2. API Service Deployment (Fly.io)
+```bash
+cd apps/api
+
+# Set the API key secret
+fly secrets set API_KEY="your-generated-api-key"
+
+# Set allowed frontend origins (your Vercel URL)
+fly secrets set ALLOWED_ORIGINS="https://your-app.vercel.app"
+
+# Optional: Set git remote for backups
+fly secrets set GIT_REMOTE_URL="https://username:token@github.com/username/repo.git"
+
+# Deploy
+fly deploy
+```
+
+#### 3. Documents App Deployment (Vercel)
+In your Vercel project settings, add these environment variables:
+```bash
+NEXT_PUBLIC_API_KEY=your-generated-api-key
+NEXT_PUBLIC_API_URL=https://tny-office-api.fly.dev
+NEXT_PUBLIC_WS_URL=wss://tny-office-api.fly.dev
+```
+
+### Environment Variables Reference
+
+#### API Service (`apps/api/.env`)
+```bash
+# Required in production
+API_KEY=your-secure-api-key
+
+# CORS settings (comma-separated origins)
+ALLOWED_ORIGINS=https://your-app.vercel.app,https://custom-domain.com
+
+# Optional: Git sync
+GIT_REMOTE_URL=https://username:token@github.com/username/repo.git
+```
+
+#### Documents App (`apps/docs/.env`)
+```bash
+# Required in production
+NEXT_PUBLIC_API_KEY=your-secure-api-key
+NEXT_PUBLIC_API_URL=https://tny-office-api.fly.dev
+NEXT_PUBLIC_WS_URL=wss://tny-office-api.fly.dev
 ```
 
 ## Adding New Apps
@@ -202,6 +311,10 @@ fly launch --no-deploy
 # Create persistent volume for SQLite
 fly volumes create data --size 1 --region bos
 
+# Set required secrets before first deploy
+fly secrets set API_KEY="$(openssl rand -hex 32)"
+fly secrets set ALLOWED_ORIGINS="https://your-docs-app.vercel.app"
+
 # Deploy
 fly deploy
 ```
@@ -239,9 +352,13 @@ The docs app can be deployed to Vercel:
 2. Import project in Vercel
 3. Set environment variables:
    ```
+   NEXT_PUBLIC_API_KEY=your-api-key-from-fly-secrets
    NEXT_PUBLIC_API_URL=https://tny-office-api.fly.dev
    NEXT_PUBLIC_WS_URL=wss://tny-office-api.fly.dev/automerge-sync
    ```
+4. Deploy
+
+**Important**: The `NEXT_PUBLIC_API_KEY` must match the `API_KEY` set in your Fly.io deployment.
 
 ## Contributing
 

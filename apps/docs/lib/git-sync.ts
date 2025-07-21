@@ -1,6 +1,5 @@
 import { log } from '@tnyoffice/logger';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { apiPost } from './api/client';
 
 export interface GitSyncResult {
   success: boolean;
@@ -23,21 +22,7 @@ export async function syncToGit(remoteUrl?: string, commitMessage?: string): Pro
 
     log.info('Syncing to git with:', { remoteUrl: remoteUrl?.replace(/:[^@]+@/, ':***@'), commitMessage });
 
-    const response = await fetch(`${API_BASE}/api/v1/git/sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || `Sync failed: ${response.status}`);
-    }
-
-    return data;
+    return await apiPost('/api/v1/git/sync', Object.keys(body).length > 0 ? body : undefined);
   } catch (error) {
     log.error('Git sync error:', error);
     throw error;

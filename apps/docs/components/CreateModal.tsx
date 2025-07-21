@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Editor } from './Editor';
 import { log } from '@tnyoffice/logger';
+import { apiPost } from '../lib/api/client';
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -10,7 +11,6 @@ interface CreateModalProps {
   onCreated: () => void;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
   const [filename, setFilename] = useState('');
@@ -40,30 +40,16 @@ export function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
       setLoading(true);
       setError(null);
 
-      const url = `${API_BASE}/api/v1/files`;
       const body = {
         filename: filename.trim(),
         content,
       };
       
-      log.debug('Creating document at:', url);
-      log.debug('Request body:', body);
+      log.debug('Creating document with body:', body);
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
+      await apiPost('/api/v1/files', body);
 
-      log.debug('Create response status:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const data = await response.json();
-        log.error('Create error:', data);
-        throw new Error(data.error || 'Failed to create document');
-      }
+      log.debug('Document created successfully');
 
       // Reset form
       setFilename('');
@@ -71,6 +57,7 @@ export function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
       onCreated();
       onClose();
     } catch (err) {
+      log.error('Create error:', err);
       setError(err instanceof Error ? err.message : 'Failed to create document');
     } finally {
       setLoading(false);

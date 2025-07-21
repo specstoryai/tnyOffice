@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { RepoContext } from '@automerge/automerge-repo-react-hooks';
 import type { Repo } from '@automerge/automerge-repo';
+import { getAuthenticatedWebSocketUrl } from '../api/client';
 
 interface AutomergeProviderProps {
   children: React.ReactNode;
@@ -17,8 +18,8 @@ export function AutomergeProvider({ children }: AutomergeProviderProps) {
       const { Repo } = await import('@automerge/automerge-repo');
       const { BrowserWebSocketClientAdapter } = await import('@automerge/automerge-repo-network-websocket');
       
-      // Get WebSocket URL from environment or use default
-      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001/automerge-sync';
+      // Get authenticated WebSocket URL
+      const wsUrl = getAuthenticatedWebSocketUrl('/automerge-sync');
       
       const newRepo = new Repo({
         network: [
