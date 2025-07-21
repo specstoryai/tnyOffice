@@ -1,9 +1,12 @@
 # Simple Authentication Plan for TnyOffice API
 
-⚠️ **SECURITY WARNING**: This is a VERY BASIC authentication approach suitable only for prototypes. The API key is exposed in the browser's JavaScript bundle, making it visible to anyone who inspects the code. We are only accepting this security risk because:
+This document describes the implemented simple, single-API-key authentication approach that secures all API endpoints (REST and WebSocket) for the TnyOffice prototype. Since the frontend is already protected by Vercel authentication, we only need to secure the communication between the Next.js app and the Node.js API.
+
 1. The Vercel deployment has password protection enabled
 2. This is a prototype, not a production application
 3. The simplicity outweighs the security concerns for our current needs
+
+⚠️ **SECURITY WARNING**: This is a VERY BASIC authentication approach suitable only for prototypes. The API key is exposed in the browser's JavaScript bundle, making it visible to anyone who inspects the code. We are only accepting this security risk because:
 
 ## Current Implementation Status ✅
 
