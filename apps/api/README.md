@@ -200,12 +200,14 @@ To push changes to a remote repository:
    GIT_REMOTE_URL=https://YOUR_USERNAME:YOUR_TOKEN@github.com/YOUR_USERNAME/YOUR_REPO.git
    ```
 
+**Note**: The git integration maintains a single remote called "origin". When you provide a new remote URL (either via environment variable or in the sync request), it will replace the existing remote URL rather than adding an additional remote.
+
 ### Usage
 ```bash
 # Basic sync (uses environment variables)
 curl -X POST http://localhost:3001/api/v1/git/sync
 
-# Sync with custom remote URL (overrides environment variable)
+# Sync with custom remote URL (replaces the existing remote)
 curl -X POST http://localhost:3001/api/v1/git/sync \
   -H "Content-Type: application/json" \
   -d '{
