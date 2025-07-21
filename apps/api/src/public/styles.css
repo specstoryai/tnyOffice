@@ -52,6 +52,56 @@ h1 {
     margin-bottom: 2rem;
 }
 
+.api-key-section {
+    margin-bottom: 2rem;
+}
+
+.api-key-card {
+    background-color: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.api-key-card h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--gray-900);
+}
+
+.api-key-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    margin-bottom: 0.5rem;
+}
+
+.api-key-form input {
+    flex: 1;
+}
+
+.api-key-form label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.api-key-status {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.api-key-status.active {
+    color: var(--success-color);
+}
+
 .endpoint-card {
     background-color: white;
     border: 1px solid var(--gray-200);
@@ -90,6 +140,11 @@ h1 {
 .method.put {
     background-color: #fef3c7;
     color: #92400e;
+}
+
+.method.delete {
+    background-color: #fee2e2;
+    color: #991b1b;
 }
 
 .path {
@@ -166,6 +221,15 @@ input:focus, textarea:focus {
 
 .btn-secondary:hover {
     background-color: var(--gray-900);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
 }
 
 .response-section, .files-section {

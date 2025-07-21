@@ -1,9 +1,11 @@
 import express, { Request, Response, Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import * as Automerge from '@automerge/automerge';
+import { AutomergeUrl } from '@automerge/automerge-repo';
 import { log } from '../utils/logger.js';
 import { getDB } from '../db/database.js';
 import { DocumentService } from '../automerge/document-service.js';
+import { getRepo } from '../automerge/repo.js';
 import { createFileSchema, listFilesSchema, updateFileSchema, isValidUUID, createCommentSchema } from '../validation.js';
 import { ZodError } from 'zod';
 import type { 
@@ -495,6 +497,60 @@ router.delete('/:id/comments/:commentId', async (req: Request<{ id: string; comm
     
   } catch (error) {
     log.error('Error deleting comment:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a file by ID
+router.delete('/:id', async (req: Request<{ id: string }>, res: Response<{ success: boolean; message: string } | ErrorResponse>) => {
+  log.info('DELETE /api/v1/files/[id] - Request received');
+  
+  try {
+    const { id } = req.params;
+    
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid file ID format' });
+    }
+    
+    const db = getDB();
+    
+    // Check if file exists
+    const file = db.prepare('SELECT id, automerge_id FROM files WHERE id = ?').get(id) as { id: string; automerge_id: string | null } | undefined;
+    
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // If file has an Automerge document, we need to clean it up
+    if (file.automerge_id) {
+      try {
+        // Get the Automerge repo and delete the document
+        const repo = getRepo();
+        await repo.delete(file.automerge_id as AutomergeUrl);
+        
+        log.info(`Deleted Automerge document ${file.automerge_id} for file ${id}`);
+      } catch (error) {
+        // Log the error but continue with file deletion
+        log.error(`Error deleting Automerge document for file ${id}:`, error);
+      }
+    }
+    
+    // Delete the file from the database
+    const deleteStmt = db.prepare('DELETE FROM files WHERE id = ?');
+    const result = deleteStmt.run(id);
+    
+    if (result.changes === 0) {
+      return res.status(500).json({ error: 'Failed to delete file' });
+    }
+    
+    log.info(`DELETE /api/v1/files/[id] - Deleted file ${id}`);
+    return res.json({ 
+      success: true, 
+      message: `File ${id} deleted successfully` 
+    });
+    
+  } catch (error) {
+    log.error('Error deleting file:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

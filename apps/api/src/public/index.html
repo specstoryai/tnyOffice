@@ -14,6 +14,19 @@
         </header>
 
         <main>
+            <!-- API Key Configuration -->
+            <section class="api-key-section">
+                <div class="api-key-card">
+                    <h3>API Authentication</h3>
+                    <div class="api-key-form">
+                        <label for="apiKey">API Key (optional)</label>
+                        <input type="text" id="apiKey" placeholder="Enter your API key for authenticated requests" />
+                        <button id="saveApiKey" class="btn btn-primary">Save</button>
+                        <button id="clearApiKey" class="btn btn-secondary">Clear</button>
+                    </div>
+                    <p class="api-key-status" id="apiKeyStatus">No API key set</p>
+                </div>
+            </section>
             <section class="api-section">
                 <h2>Test the API</h2>
                 
@@ -103,6 +116,24 @@
                                 <textarea id="updateContent" name="updateContent" rows="6" placeholder="# Updated Document&#10;&#10;Leave empty to keep existing content..."></textarea>
                             </div>
                             <button type="submit" class="btn btn-primary">Update File</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Delete File -->
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="method delete">DELETE</span>
+                        <span class="path">/api/v1/files/:id</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <p>Delete a file by ID</p>
+                        <form id="deleteForm">
+                            <div class="form-group">
+                                <label for="deleteFileId">File ID</label>
+                                <input type="text" id="deleteFileId" name="deleteFileId" placeholder="UUID" required>
+                            </div>
+                            <button type="submit" class="btn btn-danger">Delete File</button>
                         </form>
                     </div>
                 </div>
