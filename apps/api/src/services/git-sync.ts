@@ -392,7 +392,18 @@ export class GitSyncService {
       // If not preview mode, merge the remote branch
       if (!isPreview) {
         try {
-          await this.git.merge([`origin/${branch}`]);
+          // Get HEAD before merge
+          const headBefore = await this.git.revparse(['HEAD']);
+          log.info(`HEAD before merge: ${headBefore}`);
+          
+          const mergeResult = await this.git.merge([`origin/${branch}`]);
+          log.info('Merge result:', mergeResult);
+          
+          // Get HEAD after merge
+          const headAfter = await this.git.revparse(['HEAD']);
+          log.info(`HEAD after merge: ${headAfter}`);
+          log.info(`HEAD changed: ${headBefore !== headAfter}`);
+          
           log.info('Successfully merged remote changes');
         } catch (mergeError) {
           log.error('Merge failed:', mergeError);
@@ -421,15 +432,38 @@ export class GitSyncService {
   private async getChangedFiles(branch: string): Promise<FileDiff[]> {
     const changedFiles: FileDiff[] = [];
 
+    // Get current HEAD commit
+    const currentHead = await this.git.revparse(['HEAD']);
+    log.info(`Current HEAD: ${currentHead}`);
+
+    // Get remote branch commit
+    const remoteBranch = await this.git.revparse([`origin/${branch}`]);
+    log.info(`Remote branch origin/${branch}: ${remoteBranch}`);
+
     // Get diff between current HEAD and remote branch
     const diffSummary = await this.git.diffSummary([`HEAD..origin/${branch}`]);
+    log.info(`Diff summary:`, {
+      changed: diffSummary.changed,
+      insertions: diffSummary.insertions,
+      deletions: diffSummary.deletions,
+      files: diffSummary.files.map(f => ({
+        file: f.file,
+        changes: 'insertions' in f ? { insertions: f.insertions, deletions: f.deletions } : 'binary'
+      }))
+    });
     
     for (const file of diffSummary.files) {
-      if (!file.file.startsWith('documents/')) continue;
+      if (!file.file.startsWith('documents/')) {
+        log.info(`Skipping non-document file: ${file.file}`);
+        continue;
+      }
 
       const filename = path.basename(file.file);
       const fileIdMatch = filename.match(/^([a-f0-9-]+)-(.+)$/);
-      if (!fileIdMatch) continue;
+      if (!fileIdMatch) {
+        log.warn(`Skipping file with invalid naming pattern: ${filename}`);
+        continue;
+      }
 
       const [, fileId, originalFilename] = fileIdMatch;
 
@@ -440,13 +474,32 @@ export class GitSyncService {
 
         // Check if file is text file (not binary)
         if ('deletions' in file && 'insertions' in file) {
-          if (file.deletions === 0 && file.insertions > 0) {
+          log.info(`Processing text file: ${file.file}`, {
+            insertions: file.insertions,
+            deletions: file.deletions
+          });
+
+          // Check if file exists in current HEAD to determine if it's new or modified
+          let fileExistsInHead = false;
+          try {
+            await this.git.show([`HEAD:${file.file}`]);
+            fileExistsInHead = true;
+          } catch (err) {
+            // File doesn't exist in HEAD
+            fileExistsInHead = false;
+          }
+
+          if (!fileExistsInHead && file.insertions > 0) {
             status = 'added';
             gitContent = await this.git.show([`origin/${branch}:${file.file}`]);
-          } else if (file.insertions === 0 && file.deletions > 0) {
+            log.info(`File ${fileId} is new (added) - not in HEAD`);
+          } else if (fileExistsInHead && file.insertions === 0 && file.deletions > 0) {
             status = 'deleted';
+            log.info(`File ${fileId} was deleted`);
           } else {
+            status = 'modified';
             gitContent = await this.git.show([`origin/${branch}:${file.file}`]);
+            log.info(`File ${fileId} was modified`);
           }
         } else {
           // Binary file - skip
@@ -459,9 +512,17 @@ export class GitSyncService {
         try {
           const handle = await DocumentService.getOrCreateDocument(fileId);
           currentContent = await DocumentService.getDocumentContent(handle);
+          log.info(`Retrieved current content for ${fileId}, length: ${currentContent.length}`);
         } catch (err) {
-          log.warn(`Could not get Automerge content for ${fileId}, using empty content`);
+          log.warn(`Could not get Automerge content for ${fileId}, using empty content`, err);
         }
+
+        log.info(`Content comparison for ${fileId}:`, {
+          gitContentLength: gitContent.length,
+          currentContentLength: currentContent.length,
+          gitContentPreview: gitContent.substring(0, 100) + '...',
+          currentContentPreview: currentContent.substring(0, 100) + '...'
+        });
 
         changedFiles.push({
           fileId,
@@ -506,15 +567,33 @@ export class GitSyncService {
       case 'modified':
         // Apply diff to existing document
         try {
+          log.info(`Starting to apply modifications to document ${fileDiff.fileId}`);
+          
           const handle = await DocumentService.getOrCreateDocument(fileDiff.fileId);
+          
+          // Get content before changes
+          const beforeContent = await DocumentService.getDocumentContent(handle);
+          log.info(`Content before diff application, length: ${beforeContent.length}`);
+          
           const operations = GitDiffService.calculateDiff(fileDiff.gitContent, fileDiff.currentContent);
+          log.info(`Calculated ${operations.length} operations for ${fileDiff.fileId}`);
+          
           await GitDiffService.applyDiffToDocument(handle, operations);
           
+          // Get content after changes
+          const afterContent = await DocumentService.getDocumentContent(handle);
+          log.info(`Content after diff application, length: ${afterContent.length}`);
+          
           // Update SQLite cache
-          db.prepare(`
+          const updateResult = db.prepare(`
             UPDATE files SET content = ?, updated_at = unixepoch()
             WHERE id = ?
           `).run(fileDiff.gitContent, fileDiff.fileId);
+          
+          log.info(`SQLite update result for ${fileDiff.fileId}:`, {
+            changes: updateResult.changes,
+            lastInsertRowid: updateResult.lastInsertRowid
+          });
 
           log.info(`Updated document ${fileDiff.fileId} with git changes`);
         } catch (err) {

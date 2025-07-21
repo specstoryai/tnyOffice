@@ -1,6 +1,7 @@
 import { diff_match_patch } from 'diff-match-patch';
 import { DocHandle } from '@automerge/automerge-repo';
 import { log } from '../utils/logger.js';
+import { DocumentService } from '../automerge/document-service.js';
 
 export interface DiffOperation {
   type: 'insert' | 'delete' | 'retain';
@@ -35,9 +36,16 @@ export class GitDiffService {
   static calculateDiff(gitContent: string, currentContent: string): DiffOperation[] {
     const operations: DiffOperation[] = [];
     
+    log.info('Calculating diff:', {
+      currentLength: currentContent.length,
+      gitLength: gitContent.length
+    });
+    
     // Get the diffs
     const diffs = this.dmp.diff_main(currentContent, gitContent);
     this.dmp.diff_cleanupSemantic(diffs);
+    
+    log.info(`Raw diffs count: ${diffs.length}`);
     
     let position = 0;
     
@@ -58,6 +66,7 @@ export class GitDiffService {
             position,
             length: text.length
           });
+          log.info(`DELETE operation at position ${position}, length: ${text.length}`);
           // Don't advance position for deletes
           break;
           
@@ -67,10 +76,17 @@ export class GitDiffService {
             position,
             text
           });
+          log.info(`INSERT operation at position ${position}, text: "${text.substring(0, 50)}..."`);
           position += text.length;
           break;
       }
     }
+    
+    log.info(`Total operations: ${operations.length}`, {
+      inserts: operations.filter(op => op.type === 'insert').length,
+      deletes: operations.filter(op => op.type === 'delete').length,
+      retains: operations.filter(op => op.type === 'retain').length
+    });
     
     return operations;
   }
@@ -85,7 +101,14 @@ export class GitDiffService {
     // Sort operations by position in reverse order to maintain positions
     const sortedOps = [...operations].sort((a, b) => b.position - a.position);
     
+    log.info(`Applying ${sortedOps.length} operations to document`);
+    
+    const originalContent = await DocumentService.getDocumentContent(handle);
+    log.info(`Original document content length: ${originalContent.length}`);
+    
     await handle.change((doc) => {
+      log.info(`Starting document change, current content length: ${doc.content.length}`);
+      
       for (const op of sortedOps) {
         try {
           switch (op.type) {
@@ -96,6 +119,7 @@ export class GitDiffService {
                 const after = doc.content.slice(op.position);
                 doc.content = before + op.text + after;
                 log.info(`Inserted ${op.text.length} characters at position ${op.position}`);
+                log.info(`New content length after insert: ${doc.content.length}`);
               }
               break;
               
@@ -106,6 +130,7 @@ export class GitDiffService {
                 const after = doc.content.slice(op.position + op.length);
                 doc.content = before + after;
                 log.info(`Deleted ${op.length} characters at position ${op.position}`);
+                log.info(`New content length after delete: ${doc.content.length}`);
               }
               break;
               
@@ -118,7 +143,12 @@ export class GitDiffService {
           throw error;
         }
       }
+      
+      log.info(`Finished applying operations, final content length: ${doc.content.length}`);
     });
+    
+    const newContent = await DocumentService.getDocumentContent(handle);
+    log.info(`Document after changes, content length: ${newContent.length}`);
   }
 
   /**
