@@ -9,6 +9,8 @@ import type { AutomergeUrlResponse } from '@/lib/automerge/types';
 import type { Comment } from '@/lib/types/comment';
 import { MessageSquarePlus } from 'lucide-react';
 import { EditorView } from '@codemirror/view';
+import { getStoredUsername } from '@/lib/username';
+import { UserSettings } from './UserSettings';
 
 interface DocumentViewerWithCommentsProps {
   documentId: string | null;
@@ -135,12 +137,15 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
     setShowCommentModal(true);
   }, []);
 
-  const handleSubmitComment = async (text: string) => {
+  const handleSubmitComment = async (text: string, username?: string) => {
     if (!documentId || !selectedTextForComment) return;
+    
+    // Use provided username or get from storage
+    const author = username || getStoredUsername() || 'Anonymous';
     
     try {
       await createComment(documentId, {
-        author: 'Current User', // TODO: Get from auth context
+        author,
         text,
         anchorStart: selectedTextForComment.from,
         anchorEnd: selectedTextForComment.to,
@@ -251,10 +256,13 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
                 <MessageSquarePlus className="h-4 w-4" />
                 Comments ({comments.length})
               </button>
-              <span className="flex items-center gap-2 text-sm text-gray-500">
-                <span className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                {isConnected ? 'Connected' : 'Connecting...'}
-              </span>
+              <div className="flex items-center gap-3">
+                <UserSettings />
+                <span className="flex items-center gap-2 text-sm text-gray-500">
+                  <span className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                  {isConnected ? 'Connected' : 'Connecting...'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -302,7 +310,7 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
             comments={comments}
             onCommentClick={handleCommentClick}
             onCommentsUpdate={fetchComments}
-            currentUser="Current User"
+            currentUser={getStoredUsername() || undefined}
             activeCommentId={activeCommentId}
           />
         </div>
