@@ -5,9 +5,21 @@
 2. This is a prototype, not a production application
 3. The simplicity outweighs the security concerns for our current needs
 
+## Current Implementation Status ✅
+
+This authentication system has been **FULLY IMPLEMENTED** as of the latest commit. All components described in this plan are now active in the codebase.
+
+### What's Been Implemented:
+- ✅ Authentication middleware for all REST endpoints
+- ✅ WebSocket authentication (both Socket.io and native WebSocket)
+- ✅ Frontend API client with automatic authentication
+- ✅ Environment configuration files
+- ✅ CORS configuration for production
+- ✅ Development mode with optional authentication
+
 ## Overview
 
-This plan outlines a simple, single-API-key authentication approach to secure all API endpoints (REST and WebSocket) for the TnyOffice prototype. Since the frontend is already protected by Vercel authentication, we only need to secure the communication between the Next.js app and the Node.js API.
+This document describes the implemented simple, single-API-key authentication approach that secures all API endpoints (REST and WebSocket) for the TnyOffice prototype. Since the frontend is already protected by Vercel authentication, we only need to secure the communication between the Next.js app and the Node.js API.
 
 ## Requirements
 
@@ -48,11 +60,11 @@ API_KEY=your-secure-32-character-api-key-here
 NEXT_PUBLIC_API_KEY=your-secure-32-character-api-key-here
 ```
 
-## Implementation Steps
+## Implementation Details (COMPLETED)
 
-### Phase 1: Backend Authentication Middleware
+### Phase 1: Backend Authentication Middleware ✅
 
-1. **Create Authentication Middleware** (`/apps/api/src/middleware/auth.ts`):
+1. **Authentication Middleware** (`/apps/api/src/middleware/auth.ts`):
    - Extract API key from request headers
    - Compare with environment variable
    - Return 401 if missing or invalid
@@ -67,97 +79,127 @@ NEXT_PUBLIC_API_KEY=your-secure-32-character-api-key-here
    - **Socket.io**: Use `auth` middleware in connection handshake
    - **Native WebSocket**: Validate API key in connection upgrade request
 
-### Phase 2: Frontend Integration
+### Phase 2: Frontend Integration ✅
 
-1. **Create API Client Helper** (`/apps/docs/lib/api/client.ts`):
-   - Centralize API key injection
-   - Add key to all fetch requests
-   - Handle WebSocket authentication
+1. **API Client Helper** (`/apps/docs/lib/api/client.ts`):
+   - ✅ Centralized API key injection
+   - ✅ Automatic key addition to all fetch requests
+   - ✅ WebSocket authentication helpers
 
-2. **Update All API Calls**:
-   - Modify `comments.ts` to use authenticated client
-   - Update `DocumentList`, `DocumentViewer` components
-   - Update `git-sync.ts` functions
+2. **Updated API Calls**:
+   - ✅ `comments.ts` uses authenticated client
+   - ✅ `DocumentList`, `DocumentViewer`, `DocumentViewerWithComments` updated
+   - ✅ `git-sync.ts` uses authenticated requests
 
-3. **Update WebSocket Connections**:
-   - Modify Automerge provider to include API key
-   - Update Socket.io connection to include auth
+3. **WebSocket Connections**:
+   - ✅ Automerge provider includes API key in connection URL
+   - ✅ Socket.io authentication configured
 
-### Phase 3: Deployment Configuration
+### Phase 3: Deployment Configuration ✅
 
-1. **Generate Secure API Key**:
-   ```bash
-   openssl rand -hex 32
-   ```
+1. **Environment Files Created**:
+   - ✅ `/apps/api/.env.example` - API configuration template
+   - ✅ `/apps/docs/.env.example` - Frontend configuration template
 
-2. **Configure Fly.io**:
-   ```bash
-   fly secrets set API_KEY="your-generated-key"
-   ```
+2. **Deployment Instructions**:
+   - ✅ Fly.io secrets configuration documented
+   - ✅ Vercel environment variables documented
+   - ✅ API key generation command included
 
-3. **Configure Vercel**:
-   - Add `NEXT_PUBLIC_API_KEY` to Vercel environment variables
-   - Set for production environment
+### Phase 4: Security Enhancements ✅
 
-### Phase 4: Security Enhancements
+1. **CORS Configuration**:
+   - ✅ Production restricts to `ALLOWED_ORIGINS` environment variable
+   - ✅ Development allows all origins for convenience
+   - ✅ Configurable per deployment
 
-1. **Update CORS Configuration**:
-   - Change from wildcard to specific origins
-   - Allow only Vercel deployment URL in production
-   - Keep localhost for development
+2. **Request Logging**:
+   - ✅ Failed authentication attempts are logged
+   - ✅ Includes request IP for monitoring
 
-2. **Add Rate Limiting** (optional for prototype):
-   - Simple in-memory rate limiter
-   - Prevent API abuse
+## Actual Implementation Code
 
-3. **Request Logging**:
-   - Log failed authentication attempts
-   - Monitor for suspicious activity
-
-## Technical Implementation Details
-
-### Backend Middleware Structure
+### Backend Middleware (IMPLEMENTED)
 
 ```typescript
 // /apps/api/src/middleware/auth.ts
-export const authenticateRequest = (req: Request, res: Response, next: NextFunction) => {
-  const apiKey = req.headers['x-api-key'];
-  
-  if (!apiKey || apiKey !== process.env.API_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
+export const authenticateRequest = (req: Request, res: Response, next: NextFunction): Response | void => {
+  const apiKey = req.headers['x-api-key'] as string;
+  const expectedKey = process.env.API_KEY;
+
+  // Skip authentication in development if no API key is set
+  if (process.env.NODE_ENV === 'development' && !expectedKey) {
+    log.warn('API_KEY not set in development mode - skipping authentication');
+    return next();
   }
-  
+
+  if (!apiKey) {
+    log.warn(`Authentication failed: No API key provided from ${req.ip}`);
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'API key is required' 
+    });
+  }
+
+  if (!expectedKey || apiKey !== expectedKey) {
+    log.warn(`Authentication failed: Invalid API key from ${req.ip}`);
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'Invalid API key' 
+    });
+  }
+
   next();
 };
 ```
 
-### Frontend API Client Structure
+### Frontend API Client (IMPLEMENTED)
 
 ```typescript
 // /apps/docs/lib/api/client.ts
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 
-export const apiClient = {
-  fetch: (url: string, options?: RequestInit) => {
-    return fetch(url, {
-      ...options,
-      headers: {
-        ...options?.headers,
-        'x-api-key': API_KEY,
-        'Content-Type': 'application/json',
-      },
-    });
-  },
-};
+export async function apiClient(
+  endpoint: string,
+  options: ApiClientOptions = {}
+): Promise<Response> {
+  const { skipAuth = false, headers = {}, ...fetchOptions } = options;
+  const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
+
+  const requestHeaders: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...headers,
+  };
+
+  if (API_KEY && !skipAuth) {
+    requestHeaders['x-api-key'] = API_KEY;
+  }
+
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers: requestHeaders,
+  });
+
+  if (response.status === 401) {
+    console.error('API request unauthorized. Check NEXT_PUBLIC_API_KEY environment variable.');
+  }
+
+  return response;
+}
+
+// Helper methods: apiGet, apiPost, apiPut, apiDelete
+// WebSocket helpers: getAuthenticatedWebSocketUrl, getSocketIOOptions
 ```
 
-### WebSocket Authentication
+### WebSocket Authentication (IMPLEMENTED)
 
 **Socket.io**:
 ```typescript
+// /apps/api/src/websocket/server.ts
 io.use((socket, next) => {
-  const apiKey = socket.handshake.auth.apiKey;
-  if (apiKey === process.env.API_KEY) {
+  const apiKey = socket.handshake.auth.apiKey || socket.handshake.headers['x-api-key'];
+  
+  if (authenticateWebSocket(apiKey)) {
     next();
   } else {
     next(new Error('Unauthorized'));
@@ -165,16 +207,27 @@ io.use((socket, next) => {
 });
 ```
 
-**Native WebSocket**:
+**Native WebSocket (Automerge)**:
 ```typescript
-wss.on('upgrade', (request, socket, head) => {
-  const apiKey = request.headers['x-api-key'];
-  if (apiKey !== process.env.API_KEY) {
+// /apps/api/src/websocket/server.ts
+httpServer.on('upgrade', (request: IncomingMessage, socket, head) => {
+  const url = new URL(request.url || '', `http://${request.headers.host}`);
+  
+  if (url.pathname !== '/automerge-sync') {
+    return;
+  }
+
+  const apiKey = url.searchParams.get('apiKey') || request.headers['x-api-key'] as string;
+  
+  if (!authenticateWebSocket(apiKey)) {
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();
     return;
   }
-  // Continue with upgrade...
+
+  wss!.handleUpgrade(request, socket, head, (ws) => {
+    wss!.emit('connection', ws, request);
+  });
 });
 ```
 
