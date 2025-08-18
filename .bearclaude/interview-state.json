@@ -1,0 +1,108 @@
+{
+  "lastModified" : "2025-07-23T02:43:15Z",
+  "topicStates" : [
+    {
+      "responses" : {
+
+      },
+      "messages" : [
+
+      ],
+      "topic" : "brainstorming",
+      "status" : "not_started"
+    },
+    {
+      "responses" : {
+
+      },
+      "messages" : [
+
+      ],
+      "topic" : "users_and_needs",
+      "status" : "not_started"
+    },
+    {
+      "responses" : {
+        "readiness" : "mvp"
+      },
+      "messages" : [
+        {
+          "id" : "B419E480-AD8E-4646-946C-869CA74219B6",
+          "role" : "assistant",
+          "content" : "Let's figure out the right level of polish and completeness for your application. I'll help you think through what stage makes sense for your goals.",
+          "timestamp" : "2025-07-23T02:42:53Z"
+        },
+        {
+          "id" : "36039F97-8E8D-4F87-81F1-CF5A0FA6DD9D",
+          "role" : "assistant",
+          "content" : "What's driving you to build this? Is it to learn something new, solve a specific problem, or create something for others to use?",
+          "timestamp" : "2025-07-23T02:42:53Z"
+        }
+      ],
+      "startedAt" : "2025-07-23T02:42:53Z",
+      "topic" : "fidelity_level",
+      "completedAt" : "2025-07-23T02:42:55Z",
+      "status" : "completed"
+    },
+    {
+      "responses" : {
+        "webTarget" : "desktop",
+        "formType" : "web app",
+        "platform" : "desktop"
+      },
+      "messages" : [
+        {
+          "role" : "assistant",
+          "timestamp" : "2025-07-23T02:43:09Z",
+          "content" : "Let's figure out where your users will interact with your application. This impacts both design and technical choices.",
+          "id" : "36892C68-54B0-4E57-B994-353DBADFDCA5"
+        }
+      ],
+      "startedAt" : "2025-07-23T02:43:13Z",
+      "topic" : "form_factor",
+      "completedAt" : "2025-07-23T02:43:15Z",
+      "status" : "completed"
+    },
+    {
+      "responses" : {
+
+      },
+      "messages" : [
+
+      ],
+      "topic" : "core_features",
+      "status" : "not_started"
+    },
+    {
+      "responses" : {
+
+      },
+      "messages" : [
+
+      ],
+      "topic" : "language_framework",
+      "status" : "not_started"
+    },
+    {
+      "responses" : {
+
+      },
+      "messages" : [
+
+      ],
+      "topic" : "cloud_services",
+      "status" : "not_started"
+    },
+    {
+      "responses" : {
+
+      },
+      "messages" : [
+
+      ],
+      "topic" : "key_packages",
+      "status" : "not_started"
+    }
+  ],
+  "isInterviewActive" : false
+}
