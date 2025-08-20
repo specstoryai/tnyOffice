@@ -49,5 +49,3 @@ next-env.d.ts
 # Storage (for API service)
 apps/api/storage/
 
-# Specstory
-.specstory/
