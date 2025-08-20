@@ -1,3 +1,5 @@
+![Prompt Stats](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fstats-app-spst.vercel.app%2Fanalyze%3Frepo%3Dspecstoryai%2FtnyOffice&query=%24.data.promptCount&label=%23%20Prompts)
+
 # TnyOffice Monorepo
 
 A monorepo containing multiple Next.js applications with shared functionality.
