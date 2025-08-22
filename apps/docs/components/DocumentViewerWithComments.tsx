@@ -226,30 +226,30 @@ export function DocumentViewerWithComments({ documentId }: DocumentViewerWithCom
     <div className="flex h-full">
       <div className="flex-1 flex flex-col">
         {/* Document header */}
-        <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <div className="border-b border-gray-200 dark:border-gray-700 px-3 sm:px-6 py-3 sm:py-4 bg-white dark:bg-gray-800 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
                 {document.filename}
               </h1>
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 Last updated: {formatDate(document.updatedAt)} • {formatSize(document.size)}
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <button
                 onClick={() => setShowCommentsSidebar(!showCommentsSidebar)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
+                className="flex items-center gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 title="Toggle comments sidebar"
               >
-                <MessageSquarePlus className="h-4 w-4" />
-                Comments ({comments.length})
+                <MessageSquarePlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Comments</span> ({comments.length})
               </button>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <UserSettings />
-                <span className="flex items-center gap-2 text-sm text-gray-500">
-                  <span className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                  {isConnected ? 'Connected' : 'Connecting...'}
+                <span className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500">
+                  <span className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse`} />
+                  <span className="hidden sm:inline">{isConnected ? 'Connected' : 'Connecting...'}</span>
                 </span>
               </div>
             </div>
